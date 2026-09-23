@@ -23,6 +23,7 @@ export function normalizeListing(row) {
 		pickupStart: firstValue(row.pickup_start, row.pickup_window_start, row.pickup_from),
 		pickupEnd: firstValue(row.pickup_end, row.pickup_window_end, row.pickup_to),
 		expiresAt: firstValue(row.expires_at, row.expiry_time, row.expiry),
+		createdAt: firstValue(row.created_at, row.createdAt),
 		donor: row.is_anonymous ? 'Anonymous' : firstValue(row.donor_name, row.donor?.full_name, row.profile?.full_name, 'Anonymous'),
 		status: firstValue(row.status, 'available'),
 		description: firstValue(row.description, ''),
