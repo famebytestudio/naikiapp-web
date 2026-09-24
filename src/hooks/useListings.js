@@ -8,6 +8,12 @@ const demoListings = [
 ]
 
 const firstValue = (...values) => values.find((value) => value !== undefined && value !== null && value !== '')
+const asNullableNumber = (value) => {
+	const nextValue = firstValue(value, null)
+	if (nextValue === undefined || nextValue === null || nextValue === '') return null
+	const parsed = Number(nextValue)
+	return Number.isFinite(parsed) ? parsed : null
+}
 
 export function normalizeListing(row) {
 	return {
@@ -17,6 +23,7 @@ export function normalizeListing(row) {
 		quantity: firstValue(row.quantity, row.quantity_value, row.plates, 0),
 		unit: firstValue(row.unit, row.quantity_unit, 'kg'),
 		kg: Number(firstValue(row.kg, row.weight_kg, row.quantity_kg, 0)),
+		actualKg: asNullableNumber(row.actual_kg ?? row.delivered_kg ?? row.actual_kg_delivered),
 		city: firstValue(row.city, row.location_city, 'Unknown city'),
 		area: firstValue(row.area, row.location_area, 'Nearby area'),
 		address: firstValue(row.address, row.pickup_address, `${firstValue(row.area, row.location_area, '')}, ${firstValue(row.city, row.location_city, '')}`),

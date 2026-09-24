@@ -2,10 +2,18 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { normalizeListing } from './useListings'
 
+const firstValue = (...values) => values.find((value) => value !== undefined && value !== null && value !== '')
+const asNullableNumber = (value) => {
+	if (value === undefined || value === null || value === '') return null
+	const parsed = Number(value)
+	return Number.isFinite(parsed) ? parsed : null
+}
+
 const normalizeClaim = (row) => ({
 	...normalizeListing(row.donations ?? row.donation ?? {}),
 	claimedAt: row.claimed_at,
 	status: row.donations?.status ?? row.donation?.status ?? 'claimed',
+	actualKg: asNullableNumber(firstValue(row.donations?.actual_kg, row.donation?.actual_kg, row.actual_kg)),
 })
 
 export function useClaims() {
@@ -28,11 +36,12 @@ export function useClaims() {
 		setLoading(false)
 	}, [])
 
-	const updateStatus = useCallback(async (donationId, status) => {
+	const updateStatus = useCallback(async (donationId, status, actualKg = null) => {
 		if (!supabase) return { error: new Error('Live claims are unavailable until Supabase is configured.') }
 		const { error: updateError } = await supabase.rpc('update_donation_status', {
 			p_donation_id: donationId,
 			p_next_status: status,
+			p_actual_kg: actualKg,
 		})
 		if (!updateError) await loadClaims()
 		return { error: updateError }
