@@ -53,8 +53,8 @@ export function useClaims() {
 
 		const channel = supabase
 			.channel('ngo-claims')
-			.on('postgres_changes', { event: '*', schema: 'public', table: 'donation_claims' }, loadClaims)
 			.on('postgres_changes', { event: '*', schema: 'public', table: 'donations' }, loadClaims)
+			.on('postgres_changes', { event: '*', schema: 'public', table: 'donation_status_log' }, loadClaims)
 			.subscribe()
 
 		return () => supabase.removeChannel(channel)
