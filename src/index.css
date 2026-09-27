@@ -1,2 +1,13 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
+
+/*
+  Registering the families here is what makes `font-sans` and `font-display`
+  work as utilities. Without an @theme block the code has to spell Outfit out
+  as an arbitrary value (font-['Outfit']) on every heading, and Inter is
+  downloaded but never used.
+*/
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+}

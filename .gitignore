@@ -12,6 +12,13 @@ dist
 dist-ssr
 *.local
 
+# Secrets: .env holds the Supabase URL and anon key, and a stray dot-less `env`
+# file has held live values in the past. Neither may ever be staged.
+.env
+.env.*
+!.env.example
+env
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
