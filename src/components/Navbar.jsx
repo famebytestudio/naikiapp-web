@@ -15,6 +15,7 @@ import { homeForRole, NGO_VERIFICATION_META, ROLE_META } from '../utils/roles'
 const NAV_BY_ROLE = {
   donor: [
     ['/donor/listings', 'My listings'],
+    ['/donor/impact', 'My impact'],
     ['/donor/listings/new', 'Post food'],
   ],
   ngo: [

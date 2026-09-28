@@ -10,6 +10,7 @@ import Signup from './pages/Auth/Signup'
 import CreateListing from './pages/Donor/CreateListing'
 import EditListing from './pages/Donor/EditListing'
 import ListingDetail from './pages/Donor/ListingDetail'
+import MyImpact from './pages/Donor/MyImpact'
 import MyListings from './pages/Donor/MyListings'
 import Landing from './pages/Landing'
 import Feed from './pages/Ngo/Feed'
@@ -68,6 +69,14 @@ export default function App() {
               element={
                 <RequireRole roles={['donor']}>
                   <MyListings />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/donor/impact"
+              element={
+                <RequireRole roles={['donor']}>
+                  <MyImpact />
                 </RequireRole>
               }
             />

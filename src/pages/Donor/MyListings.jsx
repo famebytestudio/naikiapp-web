@@ -7,6 +7,7 @@ import Navbar from '../../components/Navbar'
 import { EmptyState, ErrorState, LoadingState } from '../../components/PageState'
 import { useCancelListing, useMyListings } from '../../hooks/useListings'
 import { formatKg } from '../../utils/formatKg'
+import { summariseImpact } from '../../utils/impact'
 import { STATUS_META, STATUSES } from '../../utils/listingStatus'
 
 const TABS = [{ value: 'all', label: 'All' }, ...STATUSES.map((status) => ({ value: status, label: STATUS_META[status].label }))]
@@ -31,9 +32,9 @@ export default function MyListings() {
 
   const visible = filter === 'all' ? items : items.filter((listing) => listing.status === filter)
 
-  const rescuedKg = items
-    .filter((listing) => listing.status === 'delivered')
-    .reduce((total, listing) => total + Number(listing.delivered_kg ?? listing.estimated_kg), 0)
+  // The header total and /donor/impact must agree, so both read the same rule
+  // rather than each summing delivered_kg themselves.
+  const rescuedKg = summariseImpact(items).rescuedKg
 
   return (
     <div className="min-h-screen bg-slate-50">
