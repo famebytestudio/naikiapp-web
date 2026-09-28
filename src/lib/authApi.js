@@ -44,10 +44,24 @@ const ACCOUNTS_KEY = 'naikiapp:mock:accounts:v1'
 const SESSION_KEY = 'naikiapp:mock:session:v1'
 
 /*
-  The demo donor keeps the id the seeded listings in listingsApi.js already point
-  at, so the sample data still belongs to the account you sign in as.
+  Ids the seeded data in listingsApi.js points at, so the sample listings belong
+  to accounts that actually exist. A moderation queue that only ever shows your
+  own listings proves nothing, so there is a second donor on the other side of
+  it - and the admin that moderated them, because the removal columns record
+  who acted.
 */
 export const DEMO_DONOR_ID = 'a3f1c8e2-5b7d-4a19-9c63-2e8f0b4d7a11'
+export const DEMO_VENDOR_ID = 'c6e9a2d8-4f71-4b36-8c15-9d3b7e0a4f28'
+export const DEMO_ADMIN_ID = 'b2d4f1a6-3c58-4e07-9f21-7a6c5d8e3b42'
+
+/*
+  The verified charity's ngo_details row, fixed rather than generated, because
+  donations.claimed_by points at it. Without a real claim behind them, the
+  seeded claimed / picked_up / delivered listings have no charity to show a
+  donor on their detail page - the "who is collecting this" half of the product
+  would be an empty panel on every row.
+*/
+export const DEMO_NGO_ID = '77777777-7777-4777-8777-777777777777'
 
 const HOUR = 60 * 60_000
 
@@ -105,7 +119,7 @@ function profile(overrides) {
   return { id: overrides.id, full_name: null, organisation: null, phone: null, role: 'donor', is_anonymous: false, created_at: now, updated_at: now, ...overrides }
 }
 
-function ngoRecord({ profileId, organisation, registrationNumber, verification, verifiedBy = null, id }) {
+function ngoRecord({ profileId, organisation, registrationNumber, verification, verifiedBy = null, reviewNote = null, id }) {
   const now = new Date().toISOString()
   return {
     id: id ?? nextId(),
@@ -116,6 +130,9 @@ function ngoRecord({ profileId, organisation, registrationNumber, verification, 
     verified_by: verifiedBy,
     // Only a decided application gets a decision timestamp.
     verified_at: verification === 'pending' ? null : now,
+    // Set by an admin alongside a decision, so a rejected charity can be told
+    // what to fix. Never written by the charity itself.
+    review_note: reviewNote,
     created_at: now,
     updated_at: now,
   }
@@ -133,17 +150,21 @@ function account({ id, email, password, profile: profileRow, ngo = null }) {
 }
 
 /*
-  One account per role, plus a second charity that is deliberately still pending.
-  Without the pending one there is no way to demonstrate that an unverified NGO
-  is kept out of the feed, which is the whole point of the verification step.
+  One account per role, plus a second charity that is deliberately still pending
+  and a second donor who is not trusted. Without the pending one there is no way
+  to demonstrate that an unverified NGO is kept out of the feed, which is the
+  whole point of the verification step; without the second donor the moderation
+  queue only ever shows the account you are signed in as, and a queue that
+  cannot show you somebody else's listing is not a queue.
 */
 function seedAccounts() {
   const now = Date.now()
   const stamp = new Date(now - 3 * 24 * HOUR).toISOString()
 
-  const adminId = nextId()
+  const adminId = DEMO_ADMIN_ID
   const verifiedNgoProfileId = nextId()
   const pendingNgoProfileId = nextId()
+  const rejectedNgoProfileId = nextId()
 
   return [
     account({
@@ -156,6 +177,24 @@ function seedAccounts() {
         organisation: 'Shah Caterers',
         phone: '0300 1234567',
         role: 'donor',
+        created_at: stamp,
+        updated_at: stamp,
+      }),
+    }),
+    account({
+      id: DEMO_VENDOR_ID,
+      email: 'vendor@naikiapp.pk',
+      password: DEMO_PASSWORD,
+      profile: profile({
+        id: DEMO_VENDOR_ID,
+        full_name: 'Rabia Noor',
+        organisation: 'Karachi Fresh Mart',
+        phone: '0321 555 0173',
+        role: 'donor',
+        // Posts anonymously, so the moderation queue has a real case of the one
+        // surface where anonymity is lifted - see ModerationCard. Charities
+        // still see "Anonymous Donor" for this account.
+        is_anonymous: true,
         created_at: stamp,
         updated_at: stamp,
       }),
@@ -174,7 +213,7 @@ function seedAccounts() {
         updated_at: stamp,
       }),
       ngo: ngoRecord({
-        id: '77777777-7777-4777-8777-777777777777',
+        id: DEMO_NGO_ID,
         profileId: verifiedNgoProfileId,
         organisation: 'Lahore Relief Trust',
         registrationNumber: 'LRT-2019-4412',
@@ -200,6 +239,28 @@ function seedAccounts() {
         organisation: 'Sindh Welfare Trust',
         registrationNumber: 'SWT-2024-0918',
         verification: 'pending',
+      }),
+    }),
+    account({
+      id: rejectedNgoProfileId,
+      email: 'rejected@naikiapp.pk',
+      password: DEMO_PASSWORD,
+      profile: profile({
+        id: rejectedNgoProfileId,
+        full_name: 'Zaid Qureshi',
+        organisation: 'Al-Madina Welfare Cell',
+        phone: '0512 555 0166',
+        role: 'ngo',
+        created_at: stamp,
+        updated_at: stamp,
+      }),
+      ngo: ngoRecord({
+        profileId: rejectedNgoProfileId,
+        organisation: 'Al-Madina Welfare Cell',
+        registrationNumber: null,
+        verification: 'rejected',
+        verifiedBy: adminId,
+        reviewNote: 'No registration number on file, and the submitted address is a residential flat. Send a number from the provincial welfare department and we will take another look.',
       }),
     }),
     account({
@@ -233,6 +294,13 @@ export const DEMO_ACCOUNTS = [
     note: 'Five seeded listings across every status',
   },
   {
+    email: 'vendor@naikiapp.pk',
+    password: DEMO_PASSWORD,
+    role: 'donor',
+    label: 'Donor, second',
+    note: 'The other side of the moderation queue, including a listing that was already taken down',
+  },
+  {
     email: 'ngo@naikiapp.pk',
     password: DEMO_PASSWORD,
     role: 'ngo',
@@ -251,7 +319,7 @@ export const DEMO_ACCOUNTS = [
     password: DEMO_PASSWORD,
     role: 'admin',
     label: 'Admin',
-    note: 'Seeded for the demo; not reachable from sign-up',
+    note: 'Verifies charities and moderates listings; seeded for the demo, not reachable from sign-up',
   },
 ]
 
@@ -458,6 +526,148 @@ export async function updateProfile(patch) {
   const updated = toSession(accounts[key])
   emit(updated)
   return updated
+}
+
+/* ------------------------------------------------------------------ admin */
+
+/*
+  ---------------------------------------------------------------------------
+  ADMIN DIRECTORY + VERIFICATION DECISIONS
+  ---------------------------------------------------------------------------
+
+  Migration 0002 left ngo_details with no UPDATE policy at all and said
+  verification was a service-role action, so this section is the browser half
+  of what 0006 opens up: a column grant on `verification` and `review_note`
+  only, behind a policy that requires the admin role.
+
+  The same three rules the migration relies on are enforced here, because a
+  mock that is easier to abuse than the real thing teaches the wrong habit:
+
+  1. ONLY AN ADMIN DECIDES. decideVerification() re-checks the role on the
+     session rather than trusting the caller, because a page is not a
+     boundary.
+  2. verified_by IS STAMPED, NOT SUBMITTED. The trigger in 0006 writes it on a
+     real database; here it is written from the acting session, so the
+     decision is still attributed to the admin who actually made it.
+  3. THE CHARITY CANNOT EDIT ITS OWN REGISTRATION. ngo_details has no client
+     UPDATE path outside this function, and signUp() always writes 'pending'
+     with no verified_by - the same pin the ngo_details_insert_own policy
+     applies.
+*/
+
+/*
+  Every account on the platform, as an admin sees it: the profile row plus the
+  charity registration where there is one.
+
+  One read serves both admin screens. The verification queue takes the entries
+  that have a registration; the moderation queue takes the rest, to put a name
+  against each listing.
+
+  Note what is NOT here: the email address. profiles has no email column -
+  on a real database that lives in auth.users, which the anon key cannot read -
+  so handing one to the UI would be something the real query could not do.
+  A moderator gets a name, an organisation and a phone number, which is what a
+  verification check and a support call both need.
+
+  Gated on the admin role, mirroring profiles_select_own in 0001, which is the
+  only policy that lets one signed-in user read another user's profile.
+*/
+export async function listAccountsForAdmin() {
+  await latency()
+  const session = getSession()
+  if (!session) throw new Error('You need to be logged in to do that.')
+  if (session.profile?.role !== 'admin') {
+    throw new Error('Only an admin can see the full account list.')
+  }
+
+  return Object.values(readAccounts()).map((entry) => ({
+    id: entry.id,
+    profile: entry.profile,
+    ngo: entry.ngo ?? null,
+  }))
+}
+
+/*
+  Approve or reject one registration.
+
+  `decision` is 'verified' or 'rejected'. Re-deciding is allowed, and
+  deliberately so: a charity rejected in error has to be correctable without a
+  database console. A rejection is required to carry a reason, because the
+  charity is shown that reason and 'not approved' on its own is not something
+  it can act on - see NGO_VERIFICATION_META in utils/roles.js.
+*/
+export async function decideVerification(id, { decision, review_note = null }) {
+  await latency()
+  const session = getSession()
+  if (!session) throw new Error('You need to be logged in to make that decision.')
+  if (session.profile?.role !== 'admin') {
+    throw new Error('Only an admin can decide on a charity registration.')
+  }
+
+  if (decision !== 'verified' && decision !== 'rejected') {
+    throw new Error('That is not a decision an admin can record.')
+  }
+
+  const note = review_note?.trim() || null
+  if (decision === 'rejected' && !note) {
+    throw new Error('Give the charity a reason so it knows what to fix.')
+  }
+  if (note && note.length > 500) {
+    throw new Error('Keep the reason under 500 characters.')
+  }
+
+  const accounts = readAccounts()
+  const key = Object.keys(accounts).find((email) => accounts[email].ngo?.id === id)
+  if (!key) throw new Error('That registration no longer exists.')
+
+  const now = new Date().toISOString()
+  const nextNgo = {
+    ...accounts[key].ngo,
+    verification: decision,
+    // Stamped from the session, never from the request. Same rule as the
+    // 0006 trigger.
+    verified_by: session.user.id,
+    verified_at: now,
+    review_note: note,
+    updated_at: now,
+  }
+
+  accounts[key] = { ...accounts[key], ngo: nextNgo }
+  writeAccounts(accounts)
+
+  /*
+    Emitted so the charity's own session picks the decision up immediately. On
+    a real database this is the same moment the next session refresh returns
+    'verified'; without the emit, an admin approving a charity in one tab would
+    leave the feed blocked in another until sign-out.
+  */
+  emit(getSession())
+
+  return nextNgo
+}
+
+/* --------------------------------------------------- charity record lookup */
+
+/*
+  A raw read of one charity by its ngo_details id, with NO authorization.
+
+  This is the storage half, and deliberately so. It is the equivalent of the
+  .from('ngo_details') query handle - it knows how to find a row and nothing
+  about who is allowed to see it. The rules live in migration 0007
+  (ngo_details_select_claiming_donor and profiles_select_claiming_donor), and
+  they are enforced by src/lib/ngoApi.js, which re-derives the claim from the
+  caller's own donations rather than trusting a caller-supplied id.
+
+  Every other exported function in this file is a gated API. This is the one
+  escape hatch, so it is named as a read and documented as one.
+*/
+export function readNgoAccount(ngoId) {
+  if (!ngoId) return null
+
+  const match = Object.values(readAccounts()).find((entry) => entry.ngo?.id === ngoId)
+  if (!match) return null
+
+  return { ngo: match.ngo, profile: match.profile }
 }
 
 /* Restore the seeded accounts, so the demo can be replayed from a clean slate. */

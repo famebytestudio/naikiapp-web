@@ -117,6 +117,7 @@ export default function MyListings() {
                 <DonationCard
                   key={listing.id}
                   listing={listing}
+                  to={`/donor/listings/${listing.id}`}
                   onCancel={cancelListing.mutateAsync}
                   isCancelling={cancelListing.isPending && cancelListing.variables === listing.id}
                 />

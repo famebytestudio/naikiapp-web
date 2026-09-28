@@ -2,30 +2,33 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import CountdownTag from './CountdownTag'
+import ListingFacts from './ListingFacts'
+import RemovedNotice from './RemovedNotice'
 import StatusBadge from './StatusBadge'
-import { formatDateTime, formatWindow } from '../utils/formatDate'
-import { formatKg, formatQuantity } from '../utils/formatKg'
-import { canCancel, canEdit, foodTypeLabel } from '../utils/listingStatus'
-
-function Detail({ label, children }) {
-  return (
-    <div>
-      <dt className="text-xs font-bold uppercase tracking-wider text-slate-400">{label}</dt>
-      <dd className="mt-1 text-sm font-semibold text-slate-700">{children}</dd>
-    </div>
-  )
-}
+import { formatKg } from '../utils/formatKg'
+import { canCancel, canEdit } from '../utils/listingStatus'
+import { isRemoved } from '../utils/moderation'
 
 /*
   One row in the donor's list. It knows which actions the current status allows
   (canEdit / canCancel) and why the others are missing, so a donor is never left
   wondering whether a button is broken or simply not allowed yet.
 */
-export default function DonationCard({ listing, now, onCancel, isCancelling }) {
+/*
+  `to` is an optional destination for a "View details" link, and is why the
+  detail link is opt-in rather than always rendered. This card is shared with the
+  NGO feed on the partner branch, and /donor/listings/:id is a donor route - a
+  hard-coded link here would hand a charity a link to a page its role guard
+  bounces. The donor list passes it; the feed can leave it off.
+*/
+export default function DonationCard({ listing, now, onCancel, isCancelling, to }) {
   const [confirming, setConfirming] = useState(false)
 
-  const editable = canEdit(listing.status)
-  const cancellable = canCancel(listing.status)
+  // A removed listing keeps its status, so canEdit/canCancel would still say yes.
+  // Removal is a separate fact about the row and it wins.
+  const removed = isRemoved(listing)
+  const editable = !removed && canEdit(listing.status)
+  const cancellable = !removed && canCancel(listing.status)
   const open = listing.status === 'available' || listing.status === 'claimed'
 
   async function handleCancel() {
@@ -39,40 +42,30 @@ export default function DonationCard({ listing, now, onCancel, isCancelling }) {
   }
 
   return (
-    <article className="flex flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-lg">
+    <article
+      className={`flex flex-col rounded-3xl border bg-white p-6 shadow-sm transition-shadow hover:shadow-lg ${
+        removed ? 'border-rose-200 opacity-90' : 'border-slate-200'
+      }`}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h3 className="font-display text-lg font-bold text-slate-900">{listing.title}</h3>
-          <p className="mt-1 text-sm text-slate-500">
-            {foodTypeLabel(listing.food_type)} · {formatQuantity(listing.quantity_value, listing.quantity_unit)} · ~
-            {formatKg(listing.estimated_kg)}
-          </p>
         </div>
         <div className="flex flex-col items-end gap-2">
           <StatusBadge status={listing.status} />
-          {open && <CountdownTag expiresAt={listing.expiry_at} now={now} />}
+          {open && !removed && <CountdownTag expiresAt={listing.expiry_at} now={now} />}
         </div>
       </div>
 
-      {listing.description && <p className="mt-4 text-sm text-slate-600">{listing.description}</p>}
-
-      <dl className="mt-5 grid grid-cols-2 gap-4 rounded-2xl bg-slate-50 p-4">
-        <Detail label="Pickup">{formatWindow(listing.pickup_start_at, listing.pickup_end_at)}</Detail>
-        <Detail label="Expires">{formatDateTime(listing.expiry_at)}</Detail>
-        <Detail label="Location">
-          {listing.area}, {listing.city}
-        </Detail>
-        <Detail label="Contact">
-          {listing.contact_name}
-          <span className="block text-xs font-medium text-slate-500">{listing.contact_phone}</span>
-        </Detail>
-      </dl>
+      <ListingFacts listing={listing} />
 
       {listing.status === 'delivered' && listing.delivered_kg != null && (
         <p className="mt-4 rounded-2xl bg-teal-50 px-4 py-3 text-sm font-semibold text-teal-800">
           Delivered {formatKg(listing.delivered_kg, { precise: true })} — counted in your impact.
         </p>
       )}
+
+      <RemovedNotice listing={listing} />
 
       {confirming ? (
         <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4">
@@ -102,10 +95,19 @@ export default function DonationCard({ listing, now, onCancel, isCancelling }) {
         </div>
       ) : (
         <div className="mt-5 flex flex-wrap items-center gap-2">
+          {to && (
+            <Link
+              to={to}
+              className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-600 active:scale-95"
+            >
+              View details
+            </Link>
+          )}
+
           {editable ? (
             <Link
               to={`/donor/listings/${listing.id}/edit`}
-              className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-600 active:scale-95"
+              className="rounded-full border border-slate-200 px-5 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-white active:scale-95"
             >
               Edit
             </Link>
