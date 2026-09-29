@@ -13,7 +13,7 @@ const normalizeClaim = (row) => ({
 	...normalizeListing(row.donations ?? row.donation ?? {}),
 	claimedAt: row.claimed_at,
 	status: row.donations?.status ?? row.donation?.status ?? 'claimed',
-	actualKg: asNullableNumber(firstValue(row.donations?.actual_kg, row.donation?.actual_kg, row.actual_kg)),
+	actualKg: asNullableNumber(firstValue(row.donations?.actual_kg, row.donations?.delivered_kg, row.donation?.actual_kg, row.donation?.delivered_kg, row.actual_kg)),
 })
 
 export function useClaims() {

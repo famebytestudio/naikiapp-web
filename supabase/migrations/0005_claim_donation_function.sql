@@ -16,7 +16,13 @@ create policy "NGOs can view their own claims"
 
 create policy "Claiming NGOs can view their donations"
 	on public.donations for select to authenticated
-	using (claimed_by = auth.uid());
+	using (
+		exists (
+			select 1 from public.ngo_details details
+			where details.id = donations.claimed_by
+			and details.profile_id = (select auth.uid())
+		)
+	);
 
 create policy "NGOs can view status history for their claims"
 	on public.donation_status_log for select to authenticated
@@ -36,20 +42,21 @@ set search_path = public
 as $$
 declare
 	locked_donation public.donations%rowtype;
+	verified_ngo_id uuid;
 	claim_time timestamptz := now();
 begin
 	if auth.uid() is null then
 		raise exception 'Authentication is required to claim a donation';
 	end if;
 
-	if not exists (
-		select 1
-		from public.profiles profile
-		join public.ngo_details details on details.profile_id = profile.id
-		where profile.id = auth.uid()
-			and profile.role = 'ngo'
-			and details.verification_status = 'verified'
-	) then
+	select details.id into verified_ngo_id
+	from public.profiles profile
+	join public.ngo_details details on details.profile_id = profile.id
+	where profile.id = (select auth.uid())
+		and profile.role = 'ngo'
+		and details.verification = 'verified';
+
+	if verified_ngo_id is null then
 		raise exception 'Only verified NGOs can claim donations';
 	end if;
 
@@ -62,19 +69,16 @@ begin
 		raise exception 'Donation not found';
 	end if;
 
-	if locked_donation.status <> 'available' or locked_donation.expires_at <= claim_time then
+	if locked_donation.status <> 'available' or locked_donation.expiry_at <= claim_time then
 		raise exception 'Donation is no longer available';
 	end if;
 
 	update public.donations
-	set status = 'claimed', claimed_by = auth.uid(), claimed_at = claim_time, updated_at = claim_time
+	set status = 'claimed', claimed_by = verified_ngo_id, claimed_at = claim_time, updated_at = claim_time
 	where id = p_donation_id;
 
 	insert into public.donation_claims (donation_id, ngo_id, claimed_at)
 	values (p_donation_id, auth.uid(), claim_time);
-
-	insert into public.donation_status_log (donation_id, status, changed_by, changed_at)
-	values (p_donation_id, 'claimed', auth.uid(), claim_time);
 
 	return query select p_donation_id, auth.uid(), claim_time;
 end;
@@ -99,24 +103,26 @@ begin
 
 	select * into locked_donation
 	from public.donations
-	where id = p_donation_id and claimed_by = auth.uid()
+	where id = p_donation_id
+		and exists (
+			select 1 from public.ngo_details details
+			where details.id = donations.claimed_by
+			and details.profile_id = (select auth.uid())
+		)
 	for update;
 
 	if not found then
 		raise exception 'Claim not found';
 	end if;
 
-	if (locked_donation.status, p_next_status) not in (('claimed', 'picked_up'), ('picked_up', 'delivered')) then
+	if (locked_donation.status::text, p_next_status) not in (('claimed', 'picked_up'), ('picked_up', 'delivered')) then
 		raise exception 'Status must advance from claimed to picked up to delivered';
 	end if;
 
 	update public.donations
-	set status = p_next_status, updated_at = status_time
+	set status = p_next_status::public.donation_status, updated_at = status_time
 	where id = p_donation_id
 	returning * into locked_donation;
-
-	insert into public.donation_status_log (donation_id, status, changed_by, changed_at)
-	values (p_donation_id, p_next_status, auth.uid(), status_time);
 
 	return locked_donation;
 end;

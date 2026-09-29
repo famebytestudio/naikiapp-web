@@ -1,11 +1,3 @@
-alter table public.donations
-	add column if not exists actual_kg numeric;
-
-alter table public.donations
-	add constraint donations_actual_kg_check
-	check (actual_kg is null or actual_kg >= 0)
-	not valid;
-
 alter table public.donation_status_log
 	add column if not exists actual_kg numeric;
 
@@ -13,6 +5,29 @@ alter table public.donation_status_log
 	add constraint donation_status_log_actual_kg_check
 	check (actual_kg is null or actual_kg >= 0)
 	not valid;
+
+drop function if exists public.update_donation_status(uuid, text);
+
+create or replace function public.log_donation_status_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+	if new.status is distinct from old.status then
+		insert into public.donation_status_log (donation_id, from_status, to_status, actor_id, actual_kg)
+		values (
+			new.id,
+			old.status,
+			new.status,
+			auth.uid(),
+			case when new.status = 'delivered' then new.delivered_kg else null end
+		);
+	end if;
+	return new;
+end;
+$$;
 
 create or replace function public.update_donation_status(p_donation_id uuid, p_next_status text, p_actual_kg numeric default null)
 returns public.donations
@@ -30,7 +45,12 @@ begin
 
 	select * into locked_donation
 	from public.donations
-	where id = p_donation_id and claimed_by = auth.uid()
+	where id = p_donation_id
+		and exists (
+			select 1 from public.ngo_details details
+			where details.id = donations.claimed_by
+			and details.profile_id = (select auth.uid())
+		)
 	for update;
 
 	if not found then
@@ -41,19 +61,16 @@ begin
 		raise exception 'Actual delivered kilograms are required when marking a donation as delivered';
 	end if;
 
-	if (locked_donation.status, p_next_status) not in (('claimed', 'picked_up'), ('picked_up', 'delivered')) then
+	if (locked_donation.status::text, p_next_status) not in (('claimed', 'picked_up'), ('picked_up', 'delivered')) then
 		raise exception 'Status must advance from claimed to picked up to delivered';
 	end if;
 
 	update public.donations
-	set status = p_next_status,
-		actual_kg = case when p_next_status = 'delivered' then p_actual_kg else actual_kg end,
+	set status = p_next_status::public.donation_status,
+		delivered_kg = case when p_next_status = 'delivered' then p_actual_kg else delivered_kg end,
 		updated_at = status_time
 	where id = p_donation_id
 	returning * into locked_donation;
-
-	insert into public.donation_status_log (donation_id, status, actual_kg, changed_by, changed_at)
-	values (p_donation_id, p_next_status, case when p_next_status = 'delivered' then p_actual_kg else null end, auth.uid(), status_time);
 
 	return locked_donation;
 end;

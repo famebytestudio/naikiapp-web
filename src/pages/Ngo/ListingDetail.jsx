@@ -38,11 +38,11 @@ export default function ListingDetail() {
 
 			const [{ data: profileData }, { data: ngoData }] = await Promise.all([
 				supabase.from('profiles').select('role').eq('id', userId).maybeSingle(),
-				supabase.from('ngo_details').select('verification_status').eq('profile_id', userId).maybeSingle(),
+				supabase.from('ngo_details').select('verification').eq('profile_id', userId).maybeSingle(),
 			])
 
 			if (isMounted) {
-				const nextVerified = profileData?.role === 'ngo' && ngoData?.verification_status === 'verified'
+				const nextVerified = profileData?.role === 'ngo' && ngoData?.verification === 'verified'
 				setIsVerifiedNgo(nextVerified)
 				setCheckingNgoStatus(false)
 			}
@@ -64,7 +64,13 @@ export default function ListingDetail() {
 				.eq('donation_id', id)
 				.order('changed_at', { ascending: true })
 
-			if (!error) setStatusTimeline(data ?? [])
+			if (!error) {
+				setStatusTimeline((data ?? []).map((event) => ({
+					...event,
+					status: event.to_status,
+					changed_at: event.created_at,
+				})))
+			}
 		}
 
 		loadTimeline()

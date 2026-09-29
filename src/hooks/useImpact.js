@@ -42,7 +42,7 @@ export function useImpact() {
 
 		const { data, error: queryError } = await supabase
 			.from('donations')
-			.select('id, status, kg, actual_kg, city')
+			.select('id, status, estimated_kg, delivered_kg, city')
 			.order('updated_at', { ascending: false })
 
 		if (queryError) {
@@ -55,7 +55,7 @@ export function useImpact() {
 		const deliveredDonations = donations.filter((donation) => donation.status === 'delivered')
 		const activeDonations = donations.filter((donation) => ['claimed', 'picked_up'].includes(donation.status))
 		const rescuedDonations = donations.filter((donation) => ['claimed', 'picked_up', 'delivered'].includes(donation.status))
-		const deliveredKg = deliveredDonations.reduce((sum, donation) => sum + toNumber(donation.actual_kg ?? donation.kg ?? 0), 0)
+		const deliveredKg = deliveredDonations.reduce((sum, donation) => sum + toNumber(donation.delivered_kg ?? donation.estimated_kg ?? 0), 0)
 		const byCity = Object.entries(donations.reduce((groups, donation) => {
 			const city = donation.city || 'Unknown city'
 			groups[city] = (groups[city] ?? 0) + 1

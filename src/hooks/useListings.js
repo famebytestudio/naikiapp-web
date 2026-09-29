@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+
+import { useAuth } from '../context/useAuth'
 import { supabase } from '../lib/supabaseClient'
+import { cancel, create, getById, listMine, update } from '../lib/listingsApi'
 
 const demoListings = [
 	{ id: 'demo-1', food: 'Chicken biryani', type: 'Cooked', quantity: 120, unit: 'plates', kg: 42, city: 'Lahore', area: 'Gulberg III', address: 'Gulberg III, Lahore', pickupStart: '2026-09-22T20:00:00', pickupEnd: '2026-09-22T21:30:00', expiresAt: '2026-09-22T22:00:00', donor: 'Al-Noor Wedding Hall', status: 'available' },
@@ -22,14 +26,14 @@ export function normalizeListing(row) {
 		type: firstValue(row.food_type, row.type, 'Other'),
 		quantity: firstValue(row.quantity, row.quantity_value, row.plates, 0),
 		unit: firstValue(row.unit, row.quantity_unit, 'kg'),
-		kg: Number(firstValue(row.kg, row.weight_kg, row.quantity_kg, 0)),
+		kg: Number(firstValue(row.kg, row.weight_kg, row.quantity_kg, row.estimated_kg, 0)),
 		actualKg: asNullableNumber(row.actual_kg ?? row.delivered_kg ?? row.actual_kg_delivered),
 		city: firstValue(row.city, row.location_city, 'Unknown city'),
 		area: firstValue(row.area, row.location_area, 'Nearby area'),
 		address: firstValue(row.address, row.pickup_address, `${firstValue(row.area, row.location_area, '')}, ${firstValue(row.city, row.location_city, '')}`),
-		pickupStart: firstValue(row.pickup_start, row.pickup_window_start, row.pickup_from),
-		pickupEnd: firstValue(row.pickup_end, row.pickup_window_end, row.pickup_to),
-		expiresAt: firstValue(row.expires_at, row.expiry_time, row.expiry),
+		pickupStart: firstValue(row.pickup_start, row.pickup_start_at, row.pickup_window_start, row.pickup_from),
+		pickupEnd: firstValue(row.pickup_end, row.pickup_end_at, row.pickup_window_end, row.pickup_to),
+		expiresAt: firstValue(row.expires_at, row.expiry_at, row.expiry_time, row.expiry),
 		createdAt: firstValue(row.created_at, row.createdAt),
 		donor: row.is_anonymous ? 'Anonymous' : firstValue(row.donor_name, row.donor?.full_name, row.profile?.full_name, 'Anonymous'),
 		status: firstValue(row.status, 'available'),
@@ -43,8 +47,13 @@ export function useListings() {
 	const [error, setError] = useState('')
 
 	const loadListings = useCallback(async () => {
-		if (!supabase) return
-		const { data, error: queryError } = await supabase.from('donations').select('*').order('expires_at', { ascending: true })
+		if (!supabase) {
+			setListings(demoListings)
+			setLoading(false)
+			return
+		}
+
+		const { data, error: queryError } = await supabase.from('donations').select('*').order('expiry_at', { ascending: true })
 		if (queryError) {
 			setError(queryError.message)
 		} else {
@@ -68,4 +77,54 @@ export function useListings() {
 	}, [loadListings])
 
 	return { listings, loading, error, refresh: loadListings }
+}
+
+export const listingKeys = {
+	all: (userId) => ['donations', userId],
+	mine: (userId) => ['donations', userId, 'mine'],
+	detail: (userId, id) => ['donations', userId, 'detail', id],
+}
+
+export function useMyListings({ enabled = true } = {}) {
+	const { isAuthenticated, user } = useAuth()
+	const userId = user?.id ?? null
+
+	return useQuery({
+		queryKey: listingKeys.mine(userId),
+		queryFn: listMine,
+		enabled: enabled && isAuthenticated && Boolean(userId),
+	})
+}
+
+export function useListing(id) {
+	const { isAuthenticated, user } = useAuth()
+	const userId = user?.id ?? null
+
+	return useQuery({
+		queryKey: listingKeys.detail(userId, id),
+		queryFn: () => getById(id),
+		enabled: Boolean(id) && isAuthenticated && Boolean(userId),
+	})
+}
+
+function useListingMutation(mutationFn) {
+	const { user } = useAuth()
+	const queryClient = useQueryClient()
+
+	return useMutation({
+		mutationFn,
+		onSuccess: () => queryClient.invalidateQueries({ queryKey: listingKeys.all(user?.id ?? null) }),
+	})
+}
+
+export function useCreateListing() {
+	return useListingMutation(create)
+}
+
+export function useUpdateListing() {
+	return useListingMutation(({ id, values }) => update(id, values))
+}
+
+export function useCancelListing() {
+	return useListingMutation(cancel)
 }
