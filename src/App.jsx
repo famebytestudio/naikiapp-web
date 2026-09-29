@@ -11,7 +11,6 @@ import ImpactDashboard from './pages/Dashboard/ImpactDashboard'
 import CreateListing from './pages/Donor/CreateListing'
 import EditListing from './pages/Donor/EditListing'
 import MyListings from './pages/Donor/MyListings'
-import ImpactDashboard from './pages/Dashboard/ImpactDashboard'
 import Landing from './pages/Landing'
 import Feed from './pages/Ngo/Feed'
 import ListingDetail from './pages/Ngo/ListingDetail'
@@ -133,4 +132,3 @@ export default function App() {
     </QueryClientProvider>
   )
 }
->>>>>>>>> Temporary merge branch 2

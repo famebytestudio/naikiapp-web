@@ -1,7 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 @import 'tailwindcss';
 
-<<<<<<<<< Temporary merge branch 1
 :root {
 	font-family: 'Outfit', 'Segoe UI', sans-serif;
 	color: #19312d;
@@ -95,7 +94,6 @@ button, input, select { font: inherit; }
 @media (max-width: 900px) { .listing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.filters { flex-wrap: wrap; }.sort-control { margin-left: 0; }.feed-heading { margin-top: 50px; }.stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.dashboard-grid { grid-template-columns: 1fr; }.landing-hero { grid-template-columns: 1fr; }.landing-header nav { display: none; } }
 @media (max-width: 620px) { .landing-shell { padding-inline: 20px; }.landing-header { gap: 16px; }.landing-hero { margin-top: 42px; }.hero-actions { flex-direction: column; align-items: flex-start; }.impact-panel { padding: 24px 20px; } }
 @media (max-width: 620px) { .feed-shell, .detail-shell { padding-inline: 20px; }.app-header nav { display: none; }.feed-heading { display: block; margin-top: 42px; }.feed-heading h1 { font-size: 52px; letter-spacing: -2.5px; }.feed-status { margin-top: 24px; }.filters { align-items: stretch; }.search-field { flex-basis: 100%; padding: 6px 4px; }.filters select { flex: 1; min-width: 0; }.sort-control { flex-basis: 100%; padding: 4px; }.sort-control select { flex: 1; }.listing-grid, .claims-grid { grid-template-columns: 1fr; }.detail-card { padding: 36px 24px; }.detail-stats { gap: 8px; }.detail-row { display: block; }.detail-row strong { display: block; max-width: none; margin-top: 8px; text-align: left; }.detail-actions { align-items: flex-start; flex-direction: column; }.claims-summary { margin-top: 24px; } }
-=========
 /*
   Registering the families here is what makes `font-sans` and `font-display`
   work as utilities. Without an @theme block the code has to spell Outfit out
@@ -106,4 +104,3 @@ button, input, select { font: inherit; }
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Outfit', ui-sans-serif, system-ui, sans-serif;
 }
->>>>>>>>> Temporary merge branch 2

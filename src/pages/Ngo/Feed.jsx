@@ -52,20 +52,4 @@ export default function Feed() {
 			{loading ? <div className="empty-state"><div className="spinner" />Loading nearby listings...</div> : filteredListings.length ? <section className="listing-grid" aria-live="polite">{filteredListings.map((listing) => <ListingCard key={listing.id} listing={listing} />)}</section> : <div className="empty-state"><strong>No matching listings</strong><span>Try widening your filters. New donations will appear here automatically.</span></div>}
 		</main>
 	)
-=========
-import RolePlaceholder from '../../components/RolePlaceholder'
-
-/*
-  Guarded placeholder. Access rules live in App.jsx (ngo role, plus verified,
-  which is why an unapproved charity sees the verification notice instead of
-  this page). The feed itself is Rida's slice - see PROJECT.md section 1.
-*/
-export default function Feed() {
-  return (
-    <RolePlaceholder
-      title="Available food"
-      description="Every listing that is still available, soonest to expire first, so a charity picks up what is most urgent rather than what is newest."
-    />
-  )
->>>>>>>>> Temporary merge branch 2
 }

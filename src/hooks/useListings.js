@@ -1,4 +1,3 @@
-<<<<<<<<< Temporary merge branch 1
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 
@@ -74,7 +73,7 @@ export function useListings() {
 	}, [loadListings])
 
 	return { listings, loading, error, refresh: loadListings }
-=========
+}
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuth } from '../context/useAuth'
@@ -144,5 +143,4 @@ export function useUpdateListing() {
 
 export function useCancelListing() {
   return useListingMutation(cancel)
->>>>>>>>> Temporary merge branch 2
 }

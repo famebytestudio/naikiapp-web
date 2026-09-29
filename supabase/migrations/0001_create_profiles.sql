@@ -1,18 +1,3 @@
-<<<<<<<<< Temporary merge branch 1
-create table if not exists public.profiles (
-	id uuid primary key references auth.users(id) on delete cascade,
-	full_name text,
-	role text not null default 'donor' check (role in ('donor', 'ngo', 'admin')),
-	created_at timestamptz not null default now(),
-	updated_at timestamptz not null default now()
-);
-
-alter table public.profiles enable row level security;
-
-create policy "Users can view their own profile"
-	on public.profiles for select to authenticated
-	using (id = auth.uid());
-=========
 -- NaikiApp 0001 - profiles
 --
 -- One profile per auth user. The role lives on this table rather than in
@@ -102,4 +87,3 @@ grant update (full_name, organisation, phone, is_anonymous)
 
 -- Profiles are only ever created by handle_new_user (security definer), so
 -- there is deliberately no INSERT policy.
->>>>>>>>> Temporary merge branch 2
