@@ -1,6 +1,22 @@
--- NaikiApp 0004 - donation status audit log
--- We keep the app-facing table name as donation_status_log so the NGO status
--- timeline and RPC helpers stay compatible with the role-based app.
+<<<<<<<<< Temporary merge branch 1
+create table if not exists public.donation_status_log (
+	id bigint generated always as identity primary key,
+	donation_id uuid not null references public.donations(id) on delete cascade,
+	status text not null check (status in ('available', 'claimed', 'picked_up', 'delivered', 'expired')),
+	changed_by uuid references public.profiles(id) on delete set null,
+	changed_at timestamptz not null default now()
+);
+
+create index if not exists donation_status_log_donation_idx
+	on public.donation_status_log (donation_id, changed_at desc);
+
+alter table public.donation_status_log enable row level security;
+=========
+-- NaikiApp 0004 - status_log
+--
+-- Append-only history behind the timeline UI. Entries are written by a trigger
+-- rather than by the client, so a listing can never change state without a
+-- matching log row.
 
 create table public.donation_status_log (
   id bigint generated always as identity primary key,
@@ -75,3 +91,9 @@ create policy "status_log_select_involved"
         )
     )
   );
+
+-- No INSERT / UPDATE / DELETE policies. The triggers above are security
+-- definer, so they still write rows, but a client cannot forge or rewrite
+-- history. This is what makes the log append-only rather than just
+-- append-only by convention.
+>>>>>>>>> Temporary merge branch 2

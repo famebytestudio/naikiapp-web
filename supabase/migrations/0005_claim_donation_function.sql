@@ -49,14 +49,14 @@ begin
 		raise exception 'Authentication is required to claim a donation';
 	end if;
 
-	select details.id into verified_ngo_id
-	from public.profiles profile
-	join public.ngo_details details on details.profile_id = profile.id
-	where profile.id = (select auth.uid())
-		and profile.role = 'ngo'
-		and details.verification = 'verified';
-
-	if verified_ngo_id is null then
+	if not exists (
+		select 1
+		from public.profiles profile
+		join public.ngo_details details on details.profile_id = profile.id
+		where profile.id = auth.uid()
+			and profile.role = 'ngo'
+			and details.verification_status = 'verified'
+	) then
 		raise exception 'Only verified NGOs can claim donations';
 	end if;
 

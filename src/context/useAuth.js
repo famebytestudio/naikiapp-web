@@ -7,7 +7,7 @@ import { createContext, useContext } from 'react'
   module that exports non-components.
 
   The value is documented in AuthContext.jsx: user, profile, ngo, role,
-  isAuthenticated, isAnonymous, ngoVerification, loading, and
+  isAuthenticated, isAnonymous, loading, and
   signIn/signUp/signOut/updateProfile.
 */
 export const AuthContext = createContext(null)

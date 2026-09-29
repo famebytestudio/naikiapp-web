@@ -1,7 +1,8 @@
 import { NavLink, Link } from 'react-router-dom'
 
 import { useAuth } from '../context/useAuth'
-import { homeForRole, NGO_VERIFICATION_META, ROLE_META } from '../utils/roles'
+import { homeForRole, ROLE_META } from '../utils/roles'
+import SignOutButton from './SignOutButton'
 
 /*
   One navbar for three products' worth of screens, so the links are keyed off the
@@ -22,13 +23,12 @@ const NAV_BY_ROLE = {
     ['/ngo/claims', 'My claims'],
   ],
   admin: [
-    ['/admin/verifications', 'Verifications'],
     ['/admin/listings', 'All listings'],
   ],
 }
 
 export default function Navbar() {
-  const { profile, role, isAuthenticated, isAnonymous, ngoVerification, signOut } = useAuth()
+  const { profile, role, isAuthenticated, isAnonymous } = useAuth()
 
   const linkClass = ({ isActive }) =>
     `rounded-full px-4 py-2 text-sm font-bold transition-colors ${
@@ -48,7 +48,6 @@ export default function Navbar() {
   }
 
   const { name, detail } = identity()
-  const verification = NGO_VERIFICATION_META[ngoVerification]
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-xl">
@@ -73,27 +72,10 @@ export default function Navbar() {
             <div className="flex items-center gap-3">
               <div className="text-right text-xs leading-tight">
                 <p className="font-bold text-slate-800">{name}</p>
-                {/*
-                  A charity's verification state is the most useful thing it can
-                  see about itself, and it changes what the platform will let it
-                  do - so it belongs here rather than only on the feed.
-                */}
-                {role === 'ngo' && verification ? (
-                  <span className={`mt-0.5 inline-block rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${verification.tone}`}>
-                    {verification.label}
-                  </span>
-                ) : (
-                  <p className="text-slate-500">{detail ?? ROLE_META[role]?.label}</p>
-                )}
+                <p className="text-slate-500">{detail ?? ROLE_META[role]?.label}</p>
               </div>
 
-              <button
-                type="button"
-                onClick={signOut}
-                className="rounded-full border border-slate-200 px-4 py-2 text-xs font-bold text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
-              >
-                Sign out
-              </button>
+              <SignOutButton />
             </div>
           </>
         ) : (

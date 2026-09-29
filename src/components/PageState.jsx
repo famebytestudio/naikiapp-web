@@ -4,8 +4,6 @@
   different spinners.
 */
 
-import { NGO_VERIFICATION_META } from '../utils/roles'
-
 function Panel({ children, className = '' }) {
   return (
     <div className={`rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm ${className}`}>
@@ -76,46 +74,6 @@ export function FullPageLoader({ label = 'Checking your session' }) {
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50" role="status" aria-live="polite">
       <div className="h-9 w-9 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-600" />
       <p className="text-sm font-semibold text-slate-500">{label}</p>
-    </div>
-  )
-}
-
-/*
-  Shown to a charity that is not verified yet. This is a state rather than a
-  refusal, so it explains the way through instead of bouncing. It mirrors the
-  donations_select_verified_ngo policy, which hides available listings from
-  anyone who is not 'verified'.
-*/
-export function PendingVerificationState({ verification, organisation }) {
-  const meta = NGO_VERIFICATION_META[verification] ?? NGO_VERIFICATION_META.pending
-
-  return (
-    <div className="min-h-screen bg-slate-50">
-      <div className="mx-auto flex min-h-screen max-w-xl items-center px-6">
-        <Panel>
-          <span className={`inline-block rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider ${meta.tone}`}>
-            {meta.label}
-          </span>
-
-          <h1 className="mt-5 font-display text-2xl font-black tracking-tight text-slate-900">
-            {verification === 'rejected' ? 'Your charity is not verified' : 'Your registration is being checked'}
-          </h1>
-
-          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-slate-600">{meta.blurb}</p>
-
-          {organisation && (
-            <p className="mt-4 text-sm font-semibold text-slate-700">
-              Registered as <span className="text-slate-900">{organisation}</span>
-            </p>
-          )}
-
-          <p className="mt-6 border-t border-slate-100 pt-5 text-xs leading-relaxed text-slate-500">
-            Browsing available food is limited to verified charities, which is what keeps unsafe or
-            misrepresented pickups off the platform. Sign out and back in at any time to check on the
-            status.
-          </p>
-        </Panel>
-      </div>
     </div>
   )
 }

@@ -1,11 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 @import 'tailwindcss';
 
-@theme {
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Outfit', ui-sans-serif, system-ui, sans-serif;
-}
-
+<<<<<<<<< Temporary merge branch 1
 :root {
 	font-family: 'Outfit', 'Segoe UI', sans-serif;
 	color: #19312d;
@@ -32,7 +28,9 @@ button, input, select { font: inherit; }
 .brand-mark { color: #ee765b; font-size: 28px; }
 .app-header nav { display: flex; gap: 34px; margin-left: 90px; color: #74837b; font-size: 14px; font-weight: 700; }
 .app-header nav a.active { color: #2b6e4f; }
-.profile-button { width: 38px; height: 38px; border: 0; border-radius: 50%; color: #fff; background: #ee765b; font-weight: 800; cursor: pointer; }
+.sign-out-button { padding: 8px 16px; border: 1px solid #dce5d4; border-radius: 999px; color: #52635a; background: #fff; font-size: 12px; font-weight: 800; cursor: pointer; transition: border-color .2s ease, color .2s ease; }
+.sign-out-button:hover { border-color: #2b6e4f; color: #2b6e4f; }
+.detail-sign-out { position: fixed; top: 22px; right: 6vw; z-index: 50; }
 .feed-heading { max-width: 1240px; margin: 70px auto 42px; display: flex; align-items: end; justify-content: space-between; gap: 28px; }
 .eyebrow { margin: 0 0 14px; color: #ee765b; font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
 .feed-heading h1 { max-width: 620px; margin: 0; color: #19312d; font-size: clamp(42px, 6vw, 76px); line-height: .95; letter-spacing: -4px; }
@@ -97,3 +95,15 @@ button, input, select { font: inherit; }
 @media (max-width: 900px) { .listing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.filters { flex-wrap: wrap; }.sort-control { margin-left: 0; }.feed-heading { margin-top: 50px; }.stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.dashboard-grid { grid-template-columns: 1fr; }.landing-hero { grid-template-columns: 1fr; }.landing-header nav { display: none; } }
 @media (max-width: 620px) { .landing-shell { padding-inline: 20px; }.landing-header { gap: 16px; }.landing-hero { margin-top: 42px; }.hero-actions { flex-direction: column; align-items: flex-start; }.impact-panel { padding: 24px 20px; } }
 @media (max-width: 620px) { .feed-shell, .detail-shell { padding-inline: 20px; }.app-header nav { display: none; }.feed-heading { display: block; margin-top: 42px; }.feed-heading h1 { font-size: 52px; letter-spacing: -2.5px; }.feed-status { margin-top: 24px; }.filters { align-items: stretch; }.search-field { flex-basis: 100%; padding: 6px 4px; }.filters select { flex: 1; min-width: 0; }.sort-control { flex-basis: 100%; padding: 4px; }.sort-control select { flex: 1; }.listing-grid, .claims-grid { grid-template-columns: 1fr; }.detail-card { padding: 36px 24px; }.detail-stats { gap: 8px; }.detail-row { display: block; }.detail-row strong { display: block; max-width: none; margin-top: 8px; text-align: left; }.detail-actions { align-items: flex-start; flex-direction: column; }.claims-summary { margin-top: 24px; } }
+=========
+/*
+  Registering the families here is what makes `font-sans` and `font-display`
+  work as utilities. Without an @theme block the code has to spell Outfit out
+  as an arbitrary value (font-['Outfit']) on every heading, and Inter is
+  downloaded but never used.
+*/
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Outfit', ui-sans-serif, system-ui, sans-serif;
+}
+>>>>>>>>> Temporary merge branch 2

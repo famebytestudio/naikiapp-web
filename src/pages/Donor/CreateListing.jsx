@@ -63,7 +63,7 @@ export default function CreateListing() {
 
         <h1 className="mt-4 font-display text-3xl font-black tracking-tight text-slate-900">Post surplus food</h1>
         <p className="mt-1 text-sm text-slate-600">
-          Verified charities browse live listings. The sooner you post, the more likely someone claims it before it expires.
+          Local charities browse live listings. The sooner you post, the more likely someone claims it before it expires.
         </p>
 
         <div className="mt-8">

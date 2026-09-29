@@ -27,9 +27,8 @@
      only, so `role` is unreachable from the client entirely. updateProfile()
      here filters to the same four columns, and signUp() rejects 'admin'.
 
-  2. AN NGO ARRIVES 'pending', NEVER 'verified'. Migration 0002 pins the
-     ngo_details_insert_own policy to verification = 'pending' with a null
-     verified_by, so a self-registration cannot pre-approve itself.
+    2. NGO access is based on the account role, not an approval status. The
+      verification field remains only as legacy data for existing accounts.
 
   SECURITY: none of this is security. Accounts and a non-cryptographic password
   digest live in localStorage, readable and editable by anyone at the devtools
@@ -82,9 +81,9 @@ function nextId() {
 }
 
 /*
-  FNV-1a. This exists so the demo does not keep a plaintext password sitting in
-  localStorage where it can be read at a glance - it is NOT a password hash and
-  provides no protection whatsoever. A real deployment never sees this function;
+    account({
+      id: communityNgoProfileId,
+      email: 'pending@naikiapp.pk',
   Supabase Auth does the hashing server-side with bcrypt.
 */
 function digestPassword(value) {
@@ -132,18 +131,14 @@ function account({ id, email, password, profile: profileRow, ngo = null }) {
   }
 }
 
-/*
-  One account per role, plus a second charity that is deliberately still pending.
-  Without the pending one there is no way to demonstrate that an unverified NGO
-  is kept out of the feed, which is the whole point of the verification step.
-*/
+/* Demo accounts cover each role, with two NGOs exercising the same access. */
 function seedAccounts() {
   const now = Date.now()
   const stamp = new Date(now - 3 * 24 * HOUR).toISOString()
 
   const adminId = nextId()
-  const verifiedNgoProfileId = nextId()
-  const pendingNgoProfileId = nextId()
+  const ngoProfileId = nextId()
+  const communityNgoProfileId = nextId()
 
   return [
     account({
@@ -161,11 +156,11 @@ function seedAccounts() {
       }),
     }),
     account({
-      id: verifiedNgoProfileId,
+      id: ngoProfileId,
       email: 'ngo@naikiapp.pk',
       password: DEMO_PASSWORD,
       profile: profile({
-        id: verifiedNgoProfileId,
+        id: ngoProfileId,
         full_name: 'Sana Yousaf',
         organisation: 'Lahore Relief Trust',
         phone: '0423 555 0192',
@@ -175,7 +170,7 @@ function seedAccounts() {
       }),
       ngo: ngoRecord({
         id: '77777777-7777-4777-8777-777777777777',
-        profileId: verifiedNgoProfileId,
+        profileId: ngoProfileId,
         organisation: 'Lahore Relief Trust',
         registrationNumber: 'LRT-2019-4412',
         verification: 'verified',
@@ -183,11 +178,11 @@ function seedAccounts() {
       }),
     }),
     account({
-      id: pendingNgoProfileId,
+      id: communityNgoProfileId,
       email: 'pending@naikiapp.pk',
       password: DEMO_PASSWORD,
       profile: profile({
-        id: pendingNgoProfileId,
+        id: communityNgoProfileId,
         full_name: 'Kamran Butt',
         organisation: 'Sindh Welfare Trust',
         phone: '0213 555 0147',
@@ -196,10 +191,10 @@ function seedAccounts() {
         updated_at: stamp,
       }),
       ngo: ngoRecord({
-        profileId: pendingNgoProfileId,
+        profileId: communityNgoProfileId,
         organisation: 'Sindh Welfare Trust',
         registrationNumber: 'SWT-2024-0918',
-        verification: 'pending',
+        verification: 'verified',
       }),
     }),
     account({
@@ -236,15 +231,15 @@ export const DEMO_ACCOUNTS = [
     email: 'ngo@naikiapp.pk',
     password: DEMO_PASSWORD,
     role: 'ngo',
-    label: 'NGO, verified',
+    label: 'NGO',
     note: 'Can browse and claim available food',
   },
   {
     email: 'pending@naikiapp.pk',
     password: DEMO_PASSWORD,
     role: 'ngo',
-    label: 'NGO, pending',
-    note: 'Blocked from the feed until an admin approves it',
+    label: 'NGO',
+    note: 'Can browse and claim available food',
   },
   {
     email: 'admin@naikiapp.pk',
@@ -408,7 +403,7 @@ export async function signUp({ email, password, full_name, organisation, phone, 
             profileId: id,
             organisation: profileRow.organisation,
             registrationNumber: registration_number?.trim() || null,
-            verification: 'pending',
+            verification: 'verified',
           })
         : null,
   })

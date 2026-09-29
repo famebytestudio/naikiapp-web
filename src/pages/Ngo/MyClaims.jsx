@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-
 import { useClaims } from '../../hooks/useClaims'
 
 const formatDate = (value) => (value ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : 'Not recorded')
@@ -78,32 +77,24 @@ export default function MyClaims() {
     setUpdatingId('')
   }
 
-  return (
-    <main className="feed-shell">
-      <header className="app-header"><Link to="/ngo" className="brand"><span>n</span> naiki<span className="brand-mark">/</span></Link><nav><Link to="/ngo">Live feed</Link><Link className="active" to="/ngo/claims">My claims</Link><Link to="/dashboard">Impact</Link></nav><button className="profile-button" type="button" aria-label="Open profile">R</button></header>
-      <section className="feed-heading claims-heading">
-        <div>
-          <p className="eyebrow">NGO workspace / your activity</p>
-          <h1>My claims.</h1>
-          <p className="subtitle">Keep track of food you are collecting and the impact already delivered.</p>
-        </div>
-        <div className="claims-summary"><strong>{activeClaims.length}</strong><span>active claims</span></div>
-      </section>
-      {error && <p className="notice error">Could not load claims: {error}</p>}
-      {statusError && <p className="notice error" role="alert">Could not update status: {statusError}</p>}
-      {loading ? <div className="empty-state"><div className="spinner" />Loading your claims...</div> : (
-        <div className="claims-sections">
-          <section className="claims-section">
-            <div className="section-heading"><h2>Active</h2><span>{activeClaims.length}</span></div>
-            {activeClaims.length ? <div className="claims-grid">{activeClaims.map((claim) => <ClaimCard key={claim.id} claim={claim} onStatusUpdate={handleStatusUpdate} updatingId={updatingId} />)}</div> : <div className="claims-empty">No active claims yet. Browse the <Link to="/ngo">live feed</Link> to find available food.</div>}
-          </section>
-          <section className="claims-section">
-            <div className="section-heading"><h2>Completed</h2><span>{completedClaims.length}</span></div>
-            {completedClaims.length ? <div className="claims-grid">{completedClaims.map((claim) => <ClaimCard key={claim.id} claim={claim} onStatusUpdate={handleStatusUpdate} updatingId={updatingId} />)}</div> : <div className="claims-empty">Completed claims will appear here after delivery or expiry.</div>}
-          </section>
-        </div>
-      )}
-    </main>
-  )
-}
+	return <main className="feed-shell"><header className="app-header"><Link to="/ngo" className="brand"><span>n</span> naiki<span className="brand-mark">/</span></Link><nav><Link to="/ngo">Live feed</Link><Link className="active" to="/ngo/claims">My claims</Link><Link to="/dashboard">Impact</Link></nav><button className="profile-button" type="button" aria-label="Open profile">R</button></header><section className="feed-heading claims-heading"><div><p className="eyebrow">NGO workspace / your activity</p><h1>My claims.</h1><p className="subtitle">Keep track of food you are collecting and the impact already delivered.</p></div><div className="claims-summary"><strong>{activeClaims.length}</strong><span>active claims</span></div></section>{error && <p className="notice error">Could not load claims: {error}</p>}{statusError && <p className="notice error" role="alert">Could not update status: {statusError}</p>}{loading ? <div className="empty-state"><div className="spinner" />Loading your claims...</div> : <div className="claims-sections"><section className="claims-section"><div className="section-heading"><h2>Active</h2><span>{activeClaims.length}</span></div>{activeClaims.length ? <div className="claims-grid">{activeClaims.map((claim) => <ClaimCard key={claim.id} claim={claim} onStatusUpdate={handleStatusUpdate} updatingId={updatingId} />)}</div> : <div className="claims-empty">No active claims yet. Browse the <Link to="/ngo">live feed</Link> to find available food.</div>}</section><section className="claims-section"><div className="section-heading"><h2>Completed</h2><span>{completedClaims.length}</span></div>{completedClaims.length ? <div className="claims-grid">{completedClaims.map((claim) => <ClaimCard key={claim.id} claim={claim} onStatusUpdate={handleStatusUpdate} updatingId={updatingId} />)}</div> : <div className="claims-empty">Completed claims will appear here after delivery or expiry.</div>}</section></div>}</main>
+=========
+import RolePlaceholder from '../../components/RolePlaceholder'
 
+/*
+  Guarded placeholder. Rida's slice - see PROJECT.md section 1.
+
+  Note this route is gated on the ngo role but not on verification: a charity
+  cannot have claimed anything before it was verified, so there is nothing here
+  to protect. The feed, which does gate on it, is the route that needs the
+  stronger check.
+*/
+export default function MyClaims() {
+  return (
+    <RolePlaceholder
+      title="My claims"
+      description="Food this charity has claimed, and how far each delivery has progressed through claimed, picked up and delivered."
+    />
+  )
+>>>>>>>>> Temporary merge branch 2
+}

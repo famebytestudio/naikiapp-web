@@ -14,7 +14,7 @@ export default function CountdownTag({ expiresAt, now: providedNow, className = 
 
   return (
     <span
-      className={`inline-flex shrink-0 items-center rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider tabular-nums ${COUNTDOWN_TONES[left.tone]} ${className}`}
+	className={`countdown-tag inline-flex shrink-0 items-center rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider tabular-nums ${COUNTDOWN_TONES[left.tone]} ${left.tone === 'urgent' ? 'countdown-urgent' : left.tone === 'soon' ? 'countdown-warning' : ''} ${className}`}
     >
       {left.label}
     </span>

@@ -2,11 +2,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import RequireRole from './components/RequireRole'
+import SignOutButton from './components/SignOutButton'
 import { AuthProvider } from './context/AuthContext'
 import ListingsOverview from './pages/Admin/ListingsOverview'
-import NgoVerification from './pages/Admin/NgoVerification'
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
+import ImpactDashboard from './pages/Dashboard/ImpactDashboard'
 import CreateListing from './pages/Donor/CreateListing'
 import EditListing from './pages/Donor/EditListing'
 import MyListings from './pages/Donor/MyListings'
@@ -37,6 +38,20 @@ function NotFound() {
   )
 }
 
+/*
+  Role-guarded routes. The guards are the only place access is decided in the
+  browser, and they are a convenience layer over RLS rather than a substitute for
+  it: every rule enforced here is enforced again by a policy on the table.
+
+  `roles` is a list so a surface can admit more than one role later without
+  changing the guard. The NGO feed additionally requires a verified charity,
+  because holding the ngo role is not the same as being allowed to see other
+  people's listings.
+
+  The bare /donor, /ngo and /admin paths exist so a role's section has an address
+  of its own; each one redirects to that role's home from utils/roles.js rather
+  than repeating the path here.
+*/
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -79,17 +94,25 @@ export default function App() {
             <Route
               path="/ngo/feed"
               element={
-                <RequireRole roles={['ngo']} requireVerifiedNgo>
+                <RequireRole roles={['ngo']}>
                   <Feed />
                 </RequireRole>
               }
             />
-            <Route path="/ngo/listings/:id" element={<ListingDetail />} />
             <Route
               path="/ngo/claims"
               element={
                 <RequireRole roles={['ngo']}>
                   <MyClaims />
+                </RequireRole>
+              }
+            />
+
+            <Route
+              path="/dashboard"
+              element={
+                <RequireRole roles={['donor', 'ngo']}>
+                  <ImpactDashboard />
                 </RequireRole>
               }
             />
@@ -103,15 +126,6 @@ export default function App() {
                 </RequireRole>
               }
             />
-            <Route
-              path="/admin/verifications"
-              element={
-                <RequireRole roles={['admin']}>
-                  <NgoVerification />
-                </RequireRole>
-              }
-            />
-
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
@@ -119,4 +133,4 @@ export default function App() {
     </QueryClientProvider>
   )
 }
-
+>>>>>>>>> Temporary merge branch 2

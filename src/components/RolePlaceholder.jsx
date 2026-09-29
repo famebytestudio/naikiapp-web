@@ -3,9 +3,8 @@ import Navbar from './Navbar'
 /*
   Placeholder for a role surface that is guarded but not built yet.
 
-  The route guard around this is the real feature - it is what proves an
-  unverified charity cannot reach the feed, and that a donor cannot reach the
-  moderation queue. The screen inside it is deliberately thin, so whoever picks
+  The route guard around this is the real feature - it is what proves a donor
+  cannot reach the moderation queue. The screen inside it is deliberately thin, so whoever picks
   the page up next replaces this file's body rather than working around it.
 */
 export default function RolePlaceholder({ title, description, children }) {
