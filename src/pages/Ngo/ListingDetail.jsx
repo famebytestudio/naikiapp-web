@@ -13,46 +13,9 @@ export default function ListingDetail() {
 	const [claiming, setClaiming] = useState(false)
 	const [claimed, setClaimed] = useState(false)
 	const [claimError, setClaimError] = useState('')
-	const [isVerifiedNgo, setIsVerifiedNgo] = useState(false)
-	const [checkingNgoStatus, setCheckingNgoStatus] = useState(Boolean(supabase))
 	const [statusTimeline, setStatusTimeline] = useState([])
+	const isVerifiedNgo = true
 	const listing = listings.find((item) => String(item.id) === id)
-
-	useEffect(() => {
-		let isMounted = true
-		const checkNgoVerification = async () => {
-			if (!supabase) {
-				if (isMounted) setCheckingNgoStatus(false)
-				return
-			}
-
-			const { data: userData } = await supabase.auth.getUser()
-			const userId = userData?.user?.id
-			if (!userId) {
-				if (isMounted) {
-					setIsVerifiedNgo(false)
-					setCheckingNgoStatus(false)
-				}
-				return
-			}
-
-			const [{ data: profileData }, { data: ngoData }] = await Promise.all([
-				supabase.from('profiles').select('role').eq('id', userId).maybeSingle(),
-				supabase.from('ngo_details').select('verification_status').eq('profile_id', userId).maybeSingle(),
-			])
-
-			if (isMounted) {
-				const nextVerified = profileData?.role === 'ngo' && ngoData?.verification_status === 'verified'
-				setIsVerifiedNgo(nextVerified)
-				setCheckingNgoStatus(false)
-			}
-		}
-
-		checkNgoVerification()
-		return () => {
-			isMounted = false
-		}
-	}, [])
 
 	useEffect(() => {
 		if (!id || !supabase) return undefined
@@ -85,11 +48,6 @@ export default function ListingDetail() {
 			setClaimError('Live claims are unavailable until Supabase is configured.')
 			return
 		}
-		if (!isVerifiedNgo) {
-			setClaimError('Only verified NGOs can claim food.')
-			return
-		}
-
 		setClaiming(true)
 		setClaimError('')
 		const { error } = await supabase.rpc('claim_donation', { p_donation_id: listing.id })
@@ -98,8 +56,8 @@ export default function ListingDetail() {
 		setClaiming(false)
 	}
 
-	const claimDisabled = claiming || claimed || !isVerifiedNgo || checkingNgoStatus || listing.status !== 'available'
-	const claimLabel = claimed ? 'Claimed successfully' : checkingNgoStatus ? 'Checking verification...' : claiming ? 'Claiming...' : !isVerifiedNgo ? 'Verified NGOs only' : 'Claim this food'
+	const claimDisabled = claiming || claimed || listing.status !== 'available'
+	const claimLabel = claimed ? 'Claimed successfully' : claiming ? 'Claiming...' : 'Claim this food'
 
 	return <main className="detail-shell"><Link to="/ngo" className="back-link">&#8592; Back to feed</Link><article className="detail-card"><div className="detail-accent" /><p className="eyebrow">Available donation</p><h1>{listing.food}</h1><p className="detail-donor">Posted by <strong>{listing.donor}</strong></p><div className="detail-stats"><div><span>Food type</span><strong>{listing.type}</strong></div><div><span>Quantity</span><strong>{listing.quantity} {listing.unit}</strong></div><div><span>Weight</span><strong>{listing.kg} kg</strong></div></div><div className="detail-row"><span>Pickup window</span><strong>{formatTime(listing.pickupStart)}<br />to {formatTime(listing.pickupEnd)}</strong></div><div className="detail-row"><span>Pickup address</span><strong>{listing.address}</strong></div>{listing.description && <p className="description">{listing.description}</p>}{statusTimeline.length > 0 && <div className="status-timeline"><div className="timeline-heading"><h3>Status timeline</h3></div>{statusTimeline.map((event) => <div key={`${event.id}-${event.changed_at}`} className="timeline-row"><span className="timeline-dot" /><div className="timeline-content"><div className="timeline-meta"><strong>{statusLabel(event.status)}</strong><time>{formatTimestamp(event.changed_at)}</time></div>{event.status === 'delivered' && event.actual_kg !== null && event.actual_kg !== undefined ? <small>Delivered weight: {Number(event.actual_kg).toFixed(1).replace(/\.0$/, '')} kg</small> : null}</div></div>)}</div>}{claimError && <p className="notice error" role="alert">{claimError}</p>}<div className="detail-actions"><button className="claim-button" type="button" onClick={claimDonation} disabled={claimDisabled}>{claimLabel}</button><a className="map-link" href={maps} target="_blank" rel="noreferrer">Open in Google Maps <span aria-hidden="true">&#8599;</span></a></div>{!isVerifiedNgo && !checkingNgoStatus && <p className="notice error" role="alert">Verified NGO status is required before claiming donations.</p>}</article></main>
 }

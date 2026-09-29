@@ -8,11 +8,8 @@
   Kept out of the components so the same rules can be reused by an admin
   "edit profile" form later without being retyped.
 
-  Note what is deliberately absent: no rule here decides whether an account is
-  *allowed*. Client-side validation is a courtesy to the person typing. The
-  rules that actually matter - you cannot promote yourself to admin, you cannot
-  register as verified - are enforced in src/lib/authApi.js and, on a real
-  database, by the grants and policies in the migrations.
+  Role authorization is enforced by src/lib/authApi.js and, on a real database,
+  by the grants and policies in the migrations.
 */
 
 import { isRole } from './roles'

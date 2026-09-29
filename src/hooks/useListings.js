@@ -1,8 +1,9 @@
-<<<<<<< HEAD
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback, useEffect, useState } from 'react'
 
 import { useAuth } from '../context/useAuth'
 import { cancel, create, getById, listMine, update } from '../lib/listingsApi'
+import { supabase } from '../lib/supabaseClient'
 
 /*
   All data fetching for the donor portal lives here, per the architecture in
@@ -68,9 +69,7 @@ export function useUpdateListing() {
 
 export function useCancelListing() {
   return useListingMutation(cancel)
-=======
-import { useCallback, useEffect, useState } from 'react'
-import { supabase } from '../lib/supabaseClient'
+}
 
 const demoListings = [
 	{ id: 'demo-1', food: 'Chicken biryani', type: 'Cooked', quantity: 120, unit: 'plates', kg: 42, city: 'Lahore', area: 'Gulberg III', address: 'Gulberg III, Lahore', pickupStart: '2026-09-22T20:00:00', pickupEnd: '2026-09-22T21:30:00', expiresAt: '2026-09-22T22:00:00', donor: 'Al-Noor Wedding Hall', status: 'available' },
@@ -139,5 +138,4 @@ export function useListings() {
 	}, [loadListings])
 
 	return { listings, loading, error, refresh: loadListings }
->>>>>>> b1e189bb00756791550fc48f767911a07d2198c0
 }

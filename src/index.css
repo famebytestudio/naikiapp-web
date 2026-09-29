@@ -1,7 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
-<<<<<<< HEAD
 /*
   Registering the families here is what makes `font-sans` and `font-display`
   work as utilities. Without an @theme block the code has to spell Outfit out
@@ -12,7 +11,6 @@
   --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Outfit', ui-sans-serif, system-ui, sans-serif;
 }
-=======
 :root {
 	font-family: 'Outfit', 'Segoe UI', sans-serif;
 	color: #19312d;
@@ -33,7 +31,9 @@ button, input, select { font: inherit; }
 .brand-mark { color: #ee765b; font-size: 28px; }
 .app-header nav { display: flex; gap: 34px; margin-left: 90px; color: #74837b; font-size: 14px; font-weight: 700; }
 .app-header nav a.active { color: #2b6e4f; }
-.profile-button { width: 38px; height: 38px; border: 0; border-radius: 50%; color: #fff; background: #ee765b; font-weight: 800; cursor: pointer; }
+.sign-out-button { padding: 8px 16px; border: 1px solid #dce5d4; border-radius: 999px; color: #52635a; background: #fff; font-size: 12px; font-weight: 800; cursor: pointer; transition: border-color .2s ease, color .2s ease; }
+.sign-out-button:hover { border-color: #2b6e4f; color: #2b6e4f; }
+.detail-sign-out { position: fixed; top: 22px; right: 6vw; z-index: 50; }
 .feed-heading { max-width: 1240px; margin: 70px auto 42px; display: flex; align-items: end; justify-content: space-between; gap: 28px; }
 .eyebrow { margin: 0 0 14px; color: #ee765b; font-size: 11px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; }
 .feed-heading h1 { max-width: 620px; margin: 0; color: #19312d; font-size: clamp(42px, 6vw, 76px); line-height: .95; letter-spacing: -4px; }
@@ -97,5 +97,4 @@ button, input, select { font: inherit; }
 .dashboard-shell { padding-bottom: 100px; }.dashboard-heading { align-items: center; }.impact-summary { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 18px 22px; border-left: 3px solid #ee765b; color: #728078; font-size: 13px; font-weight: 700; }.impact-summary strong { color: #19312d; font-size: 42px; line-height: 1; }.dashboard-grid { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: 1.4fr .9fr; gap: 18px; }.dashboard-panel { padding: 24px; border: 1px solid #dce5d4; border-radius: 16px; background: rgba(255,255,255,.82); box-shadow: 0 12px 28px rgba(34, 67, 48, .04); }.stats-panel { grid-column: 1 / -1; }.stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }.stat-card { display: flex; flex-direction: column; gap: 10px; padding: 18px; border: 1px solid #e7efe3; border-radius: 12px; background: #f7faf3; }.stat-card span { color: #7c8d85; font-size: 11px; font-weight: 800; letter-spacing: .7px; text-transform: uppercase; }.stat-card strong { color: #19312d; font-size: clamp(28px, 3vw, 42px); line-height: 1; letter-spacing: -1.5px; }.stat-card small { color: #728078; font-size: 12px; }.panel-heading { margin-bottom: 18px; }.panel-heading h2 { margin: 0; color: #19312d; font-size: 24px; }.status-breakdown { display: flex; flex-direction: column; gap: 12px; }.status-row, .city-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #edf1ea; }.status-meta { display: flex; align-items: center; gap: 8px; color: #52635a; font-size: 14px; font-weight: 700; }.status-swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }.status-row strong, .city-row strong { color: #19312d; font-size: 18px; }.city-list { display: flex; flex-direction: column; }.city-row span { color: #52635a; font-size: 14px; font-weight: 700; }.muted { margin: 0; color: #78867d; font-size: 14px; }
 @media (max-width: 900px) { .listing-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.filters { flex-wrap: wrap; }.sort-control { margin-left: 0; }.feed-heading { margin-top: 50px; }.stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.dashboard-grid { grid-template-columns: 1fr; }.landing-hero { grid-template-columns: 1fr; }.landing-header nav { display: none; } }
 @media (max-width: 620px) { .landing-shell { padding-inline: 20px; }.landing-header { gap: 16px; }.landing-hero { margin-top: 42px; }.hero-actions { flex-direction: column; align-items: flex-start; }.impact-panel { padding: 24px 20px; } }
-@media (max-width: 620px) { .feed-shell, .detail-shell { padding-inline: 20px; }.app-header nav { display: none; }.feed-heading { display: block; margin-top: 42px; }.feed-heading h1 { font-size: 52px; letter-spacing: -2.5px; }.feed-status { margin-top: 24px; }.filters { align-items: stretch; }.search-field { flex-basis: 100%; padding: 6px 4px; }.filters select { flex: 1; min-width: 0; }.sort-control { flex-basis: 100%; padding: 4px; }.sort-control select { flex: 1; }.listing-grid, .claims-grid { grid-template-columns: 1fr; }.detail-card { padding: 36px 24px; }.detail-stats { gap: 8px; }.detail-row { display: block; }.detail-row strong { display: block; max-width: none; margin-top: 8px; text-align: left; }.detail-actions { align-items: flex-start; flex-direction: column; }.claims-summary { margin-top: 24px; } }
->>>>>>> b1e189bb00756791550fc48f767911a07d2198c0
+@media (max-width: 620px) { .feed-shell, .detail-shell { padding-inline: 20px; }.detail-sign-out { top: 12px; right: 20px; }.app-header nav { display: none; }.feed-heading { display: block; margin-top: 42px; }.feed-heading h1 { font-size: 52px; letter-spacing: -2.5px; }.feed-status { margin-top: 24px; }.filters { align-items: stretch; }.search-field { flex-basis: 100%; padding: 6px 4px; }.filters select { flex: 1; min-width: 0; }.sort-control { flex-basis: 100%; padding: 4px; }.sort-control select { flex: 1; }.listing-grid, .claims-grid { grid-template-columns: 1fr; }.detail-card { padding: 36px 24px; }.detail-stats { gap: 8px; }.detail-row { display: block; }.detail-row strong { display: block; max-width: none; margin-top: 8px; text-align: left; }.detail-actions { align-items: flex-start; flex-direction: column; }.claims-summary { margin-top: 24px; } }

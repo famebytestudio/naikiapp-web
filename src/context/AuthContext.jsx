@@ -99,8 +99,6 @@ export function AuthProvider({ children }) {
       // Anonymity is a donor preference, so it is only ever true for a donor. A
       // charity registering as 'anonymous' would be a bug, not a setting.
       isAnonymous: role === 'donor' && Boolean(session?.profile?.is_anonymous),
-      ngoVerification: session?.ngo?.verification ?? null,
-      isVerifiedNgo: session?.ngo?.verification === 'verified',
       loading: !ready,
       signIn,
       signUp,

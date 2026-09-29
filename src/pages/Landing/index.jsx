@@ -1,8 +1,10 @@
-<<<<<<< HEAD
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import CountdownTag from '../../components/CountdownTag'
+import SignOutButton from '../../components/SignOutButton'
+import { useAuth } from '../../context/useAuth'
+import { useImpact } from '../../hooks/useImpact'
 import { useNow } from '../../hooks/useNow'
 
 /*
@@ -55,7 +57,7 @@ const DEMO_IMPACT = { kg: 12480, deliveries: 391, donors: 74, ngos: 26 }
 
 const STEPS = [
   ['Available', 'A donor posts surplus food with quantity, expiry time and pickup window.', 'M12 4v16m8-8H4'],
-  ['Claimed', 'One verified charity claims it. The listing locks, so nobody else can take it.', 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+  ['Claimed', 'A local charity claims it. The listing locks, so nobody else can take it.', 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
   ['Picked up', 'The charity collects the food during the pickup window.', 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4'],
   ['Delivered', 'The charity enters the actual kg delivered and the impact numbers update.', 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6'],
 ]
@@ -70,7 +72,7 @@ const ROLES = [
   {
     name: 'NGO or charity',
     who: 'Registered local charities',
-    points: ['Browse live listings by city, area and food type', 'Claim food once the admin verifies your registration', 'Update pickup status through to delivered', 'Open the pickup address in Google Maps'],
+    points: ['Browse live listings by city, area and food type', 'Claim food as soon as you create an account', 'Update pickup status through to delivered', 'Open the pickup address in Google Maps'],
     color: 'from-emerald-400 to-teal-500'
   },
   {
@@ -141,6 +143,8 @@ function ListingCard({ listing, now }) {
 }
 
 function Header() {
+  const { isAuthenticated } = useAuth()
+
   return (
     <header className="fixed inset-x-0 top-0 z-50 flex items-center justify-center p-4">
       <div className="flex w-full max-w-6xl items-center justify-between rounded-full border border-white/20 bg-white/70 px-6 py-4 shadow-lg shadow-slate-200/20 backdrop-blur-xl transition-all duration-300">
@@ -151,13 +155,21 @@ function Header() {
           NaikiApp
         </a>
         <nav className="hidden gap-8 text-sm font-bold text-slate-600 md:flex">
+          <Link to="/ngo/feed" className="transition-colors hover:text-emerald-600">Browse food</Link>
           <a href="#how" className="transition-colors hover:text-emerald-600">How it works</a>
           <a href="#roles" className="transition-colors hover:text-emerald-600">Who it's for</a>
           <a href="#impact" className="transition-colors hover:text-emerald-600">Impact</a>
         </nav>
         <div className="flex items-center gap-4 text-sm font-bold">
-          <Link to="/auth/login" className="hidden text-slate-600 transition-colors hover:text-slate-900 sm:block">Log in</Link>
-          <Link to="/auth/signup" className="rounded-full bg-slate-900 px-6 py-2.5 text-white shadow-md transition-all hover:scale-105 hover:bg-emerald-600 hover:shadow-emerald-500/30 active:scale-95">Sign up</Link>
+          {isAuthenticated ? (
+            <SignOutButton />
+          ) : (
+            <>
+              <Link to="/ngo/feed" className="hidden text-slate-600 transition-colors hover:text-slate-900 sm:block">Browse food</Link>
+              <Link to="/auth/login" className="hidden text-slate-600 transition-colors hover:text-slate-900 sm:block">Log in</Link>
+              <Link to="/auth/signup" className="rounded-full bg-slate-900 px-6 py-2.5 text-white shadow-md transition-all hover:scale-105 hover:bg-emerald-600 hover:shadow-emerald-500/30 active:scale-95">Sign up</Link>
+            </>
+          )}
         </div>
       </div>
     </header>
@@ -186,7 +198,7 @@ function Hero({ now }) {
           </h1>
           
           <p className="mt-8 max-w-xl text-lg font-medium leading-relaxed text-slate-600">
-            NaikiApp connects restaurants, wedding halls, grocers and households with verified local charities. 
+            NaikiApp connects restaurants, wedding halls, grocers and households with local charities.
             Donors post what's left over, a charity claims it, and every delivery is counted.
           </p>
           
@@ -299,10 +311,11 @@ function Roles() {
 }
 
 function Impact() {
+  const { stats: liveStats, loading } = useImpact()
   const stats = [
-    ['Deliveries completed', DEMO_IMPACT.deliveries, '+12%'],
+    ['Deliveries completed', loading ? '...' : liveStats.delivered, '+12%'],
     ['Active donors', DEMO_IMPACT.donors, '+5%'],
-    ['Verified charities', DEMO_IMPACT.ngos, '+18%'],
+    ['Local charities', DEMO_IMPACT.ngos, '+18%'],
   ]
   return (
     <section id="impact" className="relative overflow-hidden bg-emerald-900 py-32 text-white">
@@ -314,7 +327,7 @@ function Impact() {
           <h2 className="font-['Outfit'] text-xl font-bold uppercase tracking-widest text-emerald-300">Platform Impact</h2>
           <div className="mt-6 flex items-baseline gap-4">
             <span className="font-['Outfit'] text-7xl font-black tabular-nums tracking-tighter sm:text-9xl">
-              {DEMO_IMPACT.kg.toLocaleString()}
+              {loading ? '...' : liveStats.deliveredKg.toLocaleString()}
             </span>
             <span className="text-3xl font-bold text-emerald-300">kg</span>
           </div>
@@ -387,47 +400,3 @@ export default function Landing() {
     </div>
   )
 }
-=======
-import { Link } from 'react-router-dom'
-import { useImpact } from '../../hooks/useImpact'
-
-const formatKg = (value) => `${value.toFixed(1).replace(/\.0$/, '')} kg`
-
-export default function Landing() {
-	const { stats, loading } = useImpact()
-
-	return (
-		<main className="landing-shell">
-			<header className="landing-header">
-				<Link to="/" className="brand"><span>n</span> naiki<span className="brand-mark">/</span></Link>
-				<nav>
-					<Link to="/ngo">Browse food</Link>
-					<Link to="/dashboard">Impact</Link>
-				</nav>
-				<Link to="/ngo" className="landing-cta">View listings</Link>
-			</header>
-
-			<section className="landing-hero">
-				<div className="landing-copy">
-					<p className="eyebrow">Community rescue network</p>
-					<h1>Turn surplus food into shared impact.</h1>
-					<p className="subtitle">Helping donors and NGOs rescue food before it goes to waste while keeping nearby communities fed.</p>
-					<div className="hero-actions">
-						<Link to="/ngo" className="primary-button">Find food nearby</Link>
-						<Link to="/dashboard" className="map-link">See live impact</Link>
-					</div>
-				</div>
-
-				<div className="impact-panel" aria-live="polite">
-					<span className="impact-kicker">Rescued across the platform</span>
-					<strong>{loading ? 'Loading...' : formatKg(stats.deliveredKg)}</strong>
-					<div className="impact-detail">
-						<span className="status-pulse" />
-						<span>{stats.delivered} deliveries logged</span>
-					</div>
-				</div>
-			</section>
-		</main>
-	)
-}
->>>>>>> b1e189bb00756791550fc48f767911a07d2198c0

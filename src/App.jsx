@@ -1,18 +1,19 @@
-<<<<<<< HEAD
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import RequireRole from './components/RequireRole'
+import SignOutButton from './components/SignOutButton'
 import { AuthProvider } from './context/AuthContext'
 import ListingsOverview from './pages/Admin/ListingsOverview'
-import NgoVerification from './pages/Admin/NgoVerification'
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
+import ImpactDashboard from './pages/Dashboard/ImpactDashboard'
 import CreateListing from './pages/Donor/CreateListing'
 import EditListing from './pages/Donor/EditListing'
 import MyListings from './pages/Donor/MyListings'
 import Landing from './pages/Landing'
 import Feed from './pages/Ngo/Feed'
+import ListingDetail from './pages/Ngo/ListingDetail'
 import MyClaims from './pages/Ngo/MyClaims'
 
 const queryClient = new QueryClient({
@@ -44,9 +45,7 @@ function NotFound() {
   it: every rule enforced here is enforced again by a policy on the table.
 
   `roles` is a list so a surface can admit more than one role later without
-  changing the guard. The NGO feed additionally requires a verified charity,
-  because holding the ngo role is not the same as being allowed to see other
-  people's listings.
+  changing the guard.
 
   The bare /donor, /ngo and /admin paths exist so a role's section has an address
   of its own; each one redirects to that role's home from utils/roles.js rather
@@ -92,8 +91,19 @@ export default function App() {
             <Route
               path="/ngo/feed"
               element={
-                <RequireRole roles={['ngo']} requireVerifiedNgo>
+                <RequireRole roles={['ngo']}>
                   <Feed />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/ngo/listings/:id"
+              element={
+                <RequireRole roles={['ngo']}>
+                  <>
+                    <SignOutButton className="detail-sign-out" />
+                    <ListingDetail />
+                  </>
                 </RequireRole>
               }
             />
@@ -102,6 +112,15 @@ export default function App() {
               element={
                 <RequireRole roles={['ngo']}>
                   <MyClaims />
+                </RequireRole>
+              }
+            />
+
+            <Route
+              path="/dashboard"
+              element={
+                <RequireRole roles={['donor', 'ngo']}>
+                  <ImpactDashboard />
                 </RequireRole>
               }
             />
@@ -115,15 +134,6 @@ export default function App() {
                 </RequireRole>
               }
             />
-            <Route
-              path="/admin/verifications"
-              element={
-                <RequireRole roles={['admin']}>
-                  <NgoVerification />
-                </RequireRole>
-              }
-            />
-
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
@@ -131,26 +141,3 @@ export default function App() {
     </QueryClientProvider>
   )
 }
-=======
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import Landing from './pages/Landing/index.jsx'
-import Feed from './pages/Ngo/Feed.jsx'
-import ListingDetail from './pages/Ngo/ListingDetail.jsx'
-import MyClaims from './pages/Ngo/MyClaims.jsx'
-import ImpactDashboard from './pages/Dashboard/ImpactDashboard.jsx'
-
-export default function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/ngo" element={<Feed />} />
-        <Route path="/ngo/claims" element={<MyClaims />} />
-        <Route path="/ngo/listings/:id" element={<ListingDetail />} />
-        <Route path="/dashboard" element={<ImpactDashboard />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
-  )
-}
->>>>>>> b1e189bb00756791550fc48f767911a07d2198c0

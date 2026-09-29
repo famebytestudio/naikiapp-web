@@ -223,16 +223,11 @@ export async function listMine() {
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 }
 
-/*
-  The union of the three SELECT policies in migration 0003: your own rows, or -
-  for a verified charity and for an admin - the rows those roles are allowed to
-  see. A row that fails all three comes back as null, not as a forbidden error,
-  because that is what a real SELECT under RLS does: the row is simply invisible.
-*/
+/* Mirrors the donor, NGO, and admin SELECT policies in migration 0003. */
 function canRead(listing, session) {
   if (listing.donor_id === session.user.id) return true
   if (session.profile?.role === 'admin') return true
-  return listing.status === 'available' && session.ngo?.verification === 'verified'
+  return listing.status === 'available' && session.profile?.role === 'ngo'
 }
 
 export async function getById(id) {

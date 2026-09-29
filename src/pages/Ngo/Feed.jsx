@@ -1,22 +1,7 @@
-<<<<<<< HEAD
-import RolePlaceholder from '../../components/RolePlaceholder'
-
-/*
-  Guarded placeholder. Access rules live in App.jsx (ngo role, plus verified,
-  which is why an unapproved charity sees the verification notice instead of
-  this page). The feed itself is Rida's slice - see PROJECT.md section 1.
-*/
-export default function Feed() {
-  return (
-    <RolePlaceholder
-      title="Available food"
-      description="Every listing that is still available, soonest to expire first, so a charity picks up what is most urgent rather than what is newest."
-    />
-  )
-=======
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import CountdownTag from '../../components/CountdownTag.jsx'
+import SignOutButton from '../../components/SignOutButton'
 import { useListings } from '../../hooks/useListings'
 
 const formatTime = (value) => value ? new Intl.DateTimeFormat('en', { hour: 'numeric', minute: '2-digit' }).format(new Date(value)) : 'Flexible pickup'
@@ -59,12 +44,11 @@ export default function Feed() {
 
 	return (
 		<main className="feed-shell">
-			<header className="app-header"><Link to="/ngo" className="brand"><span>n</span> naiki<span className="brand-mark">/</span></Link><nav><Link className="active" to="/ngo">Live feed</Link><Link to="/ngo/claims">My claims</Link><Link to="/dashboard">Impact</Link></nav><button className="profile-button" type="button" aria-label="Open profile">R</button></header>
+			<header className="app-header"><Link to="/ngo" className="brand"><span>n</span> naiki<span className="brand-mark">/</span></Link><nav><Link className="active" to="/ngo">Live feed</Link><Link to="/ngo/claims">My claims</Link><Link to="/dashboard">Impact</Link></nav><SignOutButton /></header>
 			<section className="feed-heading"><div><p className="eyebrow">NGO workspace / live nearby</p><h1>Good food is waiting.</h1><p className="subtitle">Find surplus food around you, claim what your community can use, and make today count.</p></div><div className="feed-status"><span className="status-pulse" />Live updates on</div></section>
 			<section className="filters" aria-label="Filter listings"><label className="search-field"><span aria-hidden="true">&#8981;</span><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search food, donor, or area" /></label><select value={city} onChange={(event) => setCity(event.target.value)} aria-label="Filter by city">{options('city', 'All cities').map((value) => <option key={value}>{value}</option>)}</select><select value={area} onChange={(event) => setArea(event.target.value)} aria-label="Filter by area">{options('area', 'All areas').map((value) => <option key={value}>{value}</option>)}</select><select value={type} onChange={(event) => setType(event.target.value)} aria-label="Filter by food type">{options('type', 'All food types').map((value) => <option key={value}>{value}</option>)}</select><label className="sort-control">Sort<select value={sort} onChange={(event) => setSort(event.target.value)} aria-label="Sort listings"><option value="expiry">Expiring soonest</option><option value="newest">Newest first</option><option value="weight">Largest quantity</option></select></label></section>
 			{error && <p className="notice error">Could not load live listings: {error}</p>}
 			{loading ? <div className="empty-state"><div className="spinner" />Loading nearby listings...</div> : filteredListings.length ? <section className="listing-grid" aria-live="polite">{filteredListings.map((listing) => <ListingCard key={listing.id} listing={listing} />)}</section> : <div className="empty-state"><strong>No matching listings</strong><span>Try widening your filters. New donations will appear here automatically.</span></div>}
 		</main>
 	)
->>>>>>> b1e189bb00756791550fc48f767911a07d2198c0
 }

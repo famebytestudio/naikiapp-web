@@ -45,12 +45,10 @@ begin
 	if not exists (
 		select 1
 		from public.profiles profile
-		join public.ngo_details details on details.profile_id = profile.id
 		where profile.id = auth.uid()
 			and profile.role = 'ngo'
-			and details.verification_status = 'verified'
 	) then
-		raise exception 'Only verified NGOs can claim donations';
+		raise exception 'Only NGO accounts can claim donations';
 	end if;
 
 	select * into locked_donation

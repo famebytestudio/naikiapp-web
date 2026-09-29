@@ -95,9 +95,9 @@ create policy "donations_select_own"
   to authenticated
   using (donor_id = (select auth.uid()));
 
--- Verified charities browse only what is still on offer. A claimed listing is
--- no longer theirs to see until the claim lands.
-create policy "donations_select_verified_ngo"
+-- NGO accounts browse only what is still on offer. A claimed listing is no
+-- longer theirs to see until the claim lands.
+create policy "donations_select_ngo"
   on public.donations
   for select
   to authenticated
@@ -105,9 +105,9 @@ create policy "donations_select_verified_ngo"
     status = 'available'
     and exists (
       select 1
-      from public.ngo_details n
-      where n.profile_id = (select auth.uid())
-        and n.verification = 'verified'
+      from public.profiles p
+      where p.id = (select auth.uid())
+        and p.role = 'ngo'
     )
   );
 

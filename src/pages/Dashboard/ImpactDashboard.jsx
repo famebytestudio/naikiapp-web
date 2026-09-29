@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import SignOutButton from '../../components/SignOutButton'
 import { useImpact } from '../../hooks/useImpact'
 
 const formatKg = (value) => `${value.toFixed(1).replace(/\.0$/, '')} kg`
@@ -28,7 +29,7 @@ export default function ImpactDashboard() {
 					<Link to="/ngo/claims">My claims</Link>
 					<Link className="active" to="/dashboard">Impact</Link>
 				</nav>
-				<button className="profile-button" type="button" aria-label="Open profile">R</button>
+				<SignOutButton />
 			</header>
 
 			<section className="feed-heading dashboard-heading">

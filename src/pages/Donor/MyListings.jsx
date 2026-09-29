@@ -89,7 +89,7 @@ export default function MyListings() {
               title={items.length === 0 ? 'No food posted yet' : `Nothing ${STATUS_META[filter]?.label.toLowerCase() ?? ''}`}
               description={
                 items.length === 0
-                  ? 'Post your surplus food and a verified charity near you can claim it within minutes.'
+                  ? 'Post your surplus food and a local charity can claim it within minutes.'
                   : 'Try another filter to see the rest of your listings.'
               }
               action={
