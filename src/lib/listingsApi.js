@@ -1,6 +1,7 @@
 import { getSession, DEMO_ADMIN_ID, DEMO_DONOR_ID, DEMO_NGO_ID, DEMO_VENDOR_ID } from './authApi'
 import { canCancel, canEdit } from '../utils/listingStatus'
-import { canRemove, isRemoved, REMOVAL_REASON_MAX } from '../utils/moderation'
+import { canRemove, closedReason, isRemoved, REMOVAL_REASON_MAX } from '../utils/moderation'
+import { ANONYMOUS_DONOR_LABEL, isAnonymousDonor, publishedContactName } from '../utils/anonymity'
 
 /*
   ============================================================================
@@ -212,7 +213,7 @@ function seedListings(now) {
       city: 'Karachi',
       area: 'North Nazimabad',
       address: 'Shop 14, Block D, North Nazimabad',
-      contact_name: 'Rabia Noor',
+      contact_name: ANONYMOUS_DONOR_LABEL,
       contact_phone: '0321 555 0173',
       status: 'available',
       created_at: new Date(now - 25 * MINUTE).toISOString(),
@@ -234,7 +235,7 @@ function seedListings(now) {
       city: 'Karachi',
       area: 'Korangi',
       address: 'Flat 2, Block 5, Korangi',
-      contact_name: 'Rabia Noor',
+      contact_name: ANONYMOUS_DONOR_LABEL,
       contact_phone: '0321 555 0173',
       status: 'available',
       created_at: new Date(now - 12 * MINUTE).toISOString(),
@@ -257,7 +258,7 @@ function seedListings(now) {
       city: 'Karachi',
       area: 'Gulshan-e-Hadeed',
       address: 'Warehouse 6, Industrial Area',
-      contact_name: 'Rabia Noor',
+      contact_name: ANONYMOUS_DONOR_LABEL,
       contact_phone: '0321 555 0173',
       status: 'available',
       created_at: new Date(now - 4 * HOUR).toISOString(),
@@ -327,7 +328,20 @@ export async function getById(id) {
   const session = requireSession()
 
   const listing = readListings().find((row) => row.id === id)
-  return listing && canRead(listing, session) ? listing : null
+  if (!listing || !canRead(listing, session)) return null
+
+  // A real SELECT under donations_select_verified_ngo returns contact_name as
+  // stored, so this is only a second line of defence - the 0013 trigger already
+  // masked it at write time. It stays because a row seeded before that trigger
+  // was applied would otherwise keep handing a charity a name, and this is the
+  // one function where being wrong is a privacy failure rather than a wrong
+  // label. Only the donor's own row is passed through untouched, so the donor
+  // still sees the contact name they typed.
+  if (listing.donor_id !== session.user.id) {
+    return { ...listing, contact_name: publishedContactName(listing) }
+  }
+
+  return listing
 }
 
 /* ----------------------------------------------------------------- write */
@@ -362,6 +376,15 @@ export async function create(values) {
     cancelled_at: null,
     created_at: now,
     updated_at: now,
+  }
+
+  // Mirrors the BEFORE INSERT trigger of the same name in migration 0013: an
+  // anonymous donor's contact_name is replaced before the row is stored, rather
+  // than at the moment somebody remembers to render it. Done here rather than in
+  // a read path because the read path is exactly where it went wrong - canRead()
+  // below hands a whole listing to a verified charity, contact_name included.
+  if (isAnonymousDonor(session.profile)) {
+    donation.contact_name = ANONYMOUS_DONOR_LABEL
   }
 
   writeListings([donation, ...readListings()])
@@ -426,11 +449,10 @@ export async function cancel(id) {
   // A removed listing is frozen, so it is not the donor's to cancel either.
   requireNotRemoved(current)
   if (!canCancel(current.status)) {
-    throw new Error(
-      current.status === 'picked_up' || current.status === 'delivered'
-        ? 'This food has already been collected, so it can no longer be cancelled.'
-        : 'This listing is closed and can no longer be cancelled.',
-    )
+    // closedReason() knows picked_up and delivered apart from the statuses that
+    // were simply closed, so a donor is not told a charity collected food that
+    // never left their kitchen.
+    throw new Error(`${closedReason(current.status).replace(/\.$/, '')}, so it can no longer be cancelled.`)
   }
 
   const now = new Date().toISOString()
@@ -525,11 +547,9 @@ export async function removeListing(id, { reason } = {}) {
   if (isRemoved(current)) throw new Error('That listing has already been removed.')
 
   if (!canRemove(current.status)) {
-    throw new Error(
-      current.status === 'delivered'
-        ? 'Delivered food is reported history, so the listing cannot be removed.'
-        : 'This food has already been collected, so the listing cannot be removed.',
-    )
+    // Same reason string the moderator was shown on the disabled button, so the
+    // two never contradict each other if a write is attempted anyway.
+    throw new Error(closedReason(current.status))
   }
 
   const trimmed = String(reason ?? '').trim()

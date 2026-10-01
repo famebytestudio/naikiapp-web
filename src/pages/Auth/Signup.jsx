@@ -96,7 +96,10 @@ function SignupForm() {
       const session = await signUp(values)
       // A new charity lands on the verification notice rather than the feed,
       // which is the honest first screen for a pending account.
-      navigate(location.state?.from ?? homeForRole(session.profile.role), { replace: true })
+      // Guarded the same way Login.jsx guards it - see the note there. A signup
+      // whose handle_new_user() trigger did not fire returns a session with no
+      // profile, and that must not be a TypeError on the way to first login.
+      navigate(location.state?.from ?? homeForRole(session?.profile?.role), { replace: true })
     } catch (error) {
       setFormError(error.message)
     } finally {

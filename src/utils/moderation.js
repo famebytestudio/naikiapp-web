@@ -48,16 +48,45 @@ export function isDecided(verification) {
 }
 
 /*
+  Why a listing cannot be moderated or cancelled, as one sentence keyed on the
+  actual status.
+
+  This lives here rather than being written at each call site because the wrong
+  version of it was already the bug: both listingsApi.js and this file used to
+  say "this food has already been collected" for every non-removable status,
+  which is only true of picked_up and delivered. A cancelled listing was refused
+  on the grounds that a charity had collected food the donor had already pulled,
+  and an expired one for a pickup that never happened. A moderator reading that
+  cannot tell whether the button is broken or the queue has the wrong row, which
+  is the outcome the rest of this module exists to prevent.
+
+  So each closed status gets the reason that is actually true of it. A listing
+  that no charity ever saw can still be left up for the record - it is not
+  "unsafe", just closed - and saying so is more useful than inventing a
+  collection that did not happen.
+*/
+export function closedReason(status) {
+  switch (status) {
+    case 'delivered':
+      return 'Delivered food is reported history and cannot be moderated.'
+    case 'picked_up':
+      return 'This food has already been collected, so the listing cannot be moderated.'
+    case 'expired':
+      return 'The pickup window lapsed, so this listing is closed. Nothing to take down.'
+    case 'cancelled':
+      return 'The donor cancelled this listing, so it is closed. Nothing to take down.'
+    default:
+      return 'This listing is closed and cannot be moderated.'
+  }
+}
+
+/*
   Why an action is unavailable, in words a moderator can act on. Rendering
   "disabled" with no explanation is how a queue ends up with a button nobody
   trusts.
 */
 export function removalBlockReason(listing) {
   if (isRemoved(listing)) return 'Already removed. Restore it to put the listing back on the feed.'
-  if (!canRemove(listing.status)) {
-    return listing.status === 'delivered'
-      ? 'Delivered food is reported history and cannot be removed.'
-      : 'This food has already been collected, so the listing cannot be taken down.'
-  }
+  if (!canRemove(listing.status)) return closedReason(listing.status)
   return null
 }

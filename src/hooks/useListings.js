@@ -79,14 +79,30 @@ export const claimingNgoKeys = {
   still moving, so a donor watching a pickup sees a verification change without
   reloading.
 */
-export function useClaimingNgo(donationId, { status, live = false } = {}) {
+export function useClaimingNgo(donationId, { status, claimedBy, live = false } = {}) {
   const { isAuthenticated, user } = useAuth()
   const userId = user?.id ?? null
 
   return useQuery({
     queryKey: claimingNgoKeys.byDonation(userId, donationId),
     queryFn: () => getClaimingNgo(donationId),
-    enabled: Boolean(donationId) && isAuthenticated && Boolean(userId),
+    /*
+      Gated on claimedBy rather than on the donation id alone, which is what the
+      note above describes. getClaimingNgo() re-derives the claim from the store
+      and returns null for an unclaimed listing, so without this gate an
+      available listing fired a lookup whose only possible answer was null.
+
+      Reading the claim off the caller's listing rather than accepting it is
+      still what ngoApi.js enforces - this is purely a "don't ask when there is
+      nothing to ask about" guard, and a forged claimedBy buys nothing because
+      the lookup re-derives it.
+
+      Gating on claimedBy is also what lets the query start on its own. The
+      listing is polled every 15s while it is moving, so the moment a charity
+      claims it claimedBy becomes non-null, enabled flips to true, and the
+      charity card appears without the donor reloading.
+    */
+    enabled: Boolean(donationId) && Boolean(claimedBy) && isAuthenticated && Boolean(userId),
     refetchInterval: live && isStillMoving(status) ? 15_000 : false,
   })
 }

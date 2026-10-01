@@ -26,6 +26,12 @@
   - A row is only ever walked forward. A listing that somehow carries a later
     timestamp without the status to match (a cancelled listing that was claimed
     first) shows both, which is a truer history than quietly hiding one.
+
+  Both of those are the same rule, and it is applied once at the bottom of
+  buildTimeline rather than special-cased per status: the row's own status is
+  the fact, and the timestamps are only how we date it. A status missing from
+  the derived history gets appended with at: null, so the timeline can never end
+  on a step the listing has already left behind.
 */
 
 import { formatDateTime } from './formatDate'
@@ -69,15 +75,39 @@ export function buildTimeline(listing) {
       continue
     }
 
-    if (step.status === 'expired') {
-      // Only for a row that actually expired, and only once.
-      if (listing.status !== 'expired') continue
-      entries.push({ ...step, at: null })
-      continue
-    }
+    // Handled by the reconciliation at the bottom rather than here, because
+    // 'expired' is not the only status that can arrive without its timestamp.
+    if (step.status === 'expired') continue
 
     if (!listing[step.at]) continue
     entries.push({ ...step, at: listing[step.at] })
+  }
+
+  /*
+    The row's own status is the fact; the timestamps are only how we date it. If
+    the status is not the last thing we derived, append it rather than letting
+    the timeline stop early.
+
+    Two shapes reach here, and one of them is a bug worth naming. A cancelled
+    listing that was claimed first has two genuine steps and legitimately ends on
+    'claimed' - the walk-forward behaviour documented at the top. A cancelled
+    listing with no cancelled_at is a row that says one thing and timestamps
+    another, and donations_cancel_own permits it, because that policy checks
+    status = 'cancelled' and nothing else. Before this, such a row rendered a
+    Cancelled badge above a timeline whose last line read "Posted and visible to
+    verified charities" - telling a donor their cancelled food was still up.
+
+    Both are answered the same way, and the timestamp is reported honestly rather
+    than invented: the entry appears with at: null, which StatusTimeline already
+    prints as "Time not recorded".
+  */
+  const last = entries[entries.length - 1]
+  if (!last || last.status !== listing.status) {
+    const step = STEPS.find((candidate) => candidate.status === listing.status)
+    if (step) {
+      const at = step.at ? (listing[step.at] ?? null) : null
+      entries.push({ ...step, at })
+    }
   }
 
   return entries

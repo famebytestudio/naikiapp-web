@@ -5,6 +5,7 @@ import ListingFacts from './ListingFacts'
 import StatusBadge from './StatusBadge'
 import { formatDateTime } from '../utils/formatDate'
 import { isRemoved, removalBlockReason, REMOVAL_PRESETS, REMOVAL_REASON_MAX } from '../utils/moderation'
+import { ANONYMOUS_DONOR_LABEL, donorNameForAdmin } from '../utils/anonymity'
 
 /*
   One listing in the admin's moderation queue.
@@ -81,13 +82,13 @@ export default function ModerationCard({ listing, donor, removedByName, now, onR
       */}
       <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-2xl bg-slate-50 px-4 py-3">
         <span className="text-sm font-bold text-slate-900">
-          {donor?.full_name ?? 'Unknown donor'}
+          {donorNameForAdmin(donor)}
           {donor?.organisation ? <span className="font-medium text-slate-500"> · {donor.organisation}</span> : null}
         </span>
         {donor?.phone && <span className="text-sm text-slate-600">{donor.phone}</span>}
         {donor?.is_anonymous && (
           <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600">
-            Posts anonymously · identity shown to admins only
+            Posts anonymously as &ldquo;{ANONYMOUS_DONOR_LABEL}&rdquo; &middot; identity shown to admins only
           </span>
         )}
       </div>

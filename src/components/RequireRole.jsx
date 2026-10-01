@@ -38,7 +38,13 @@ export default function RequireRole({ roles, requireVerifiedNgo = false, childre
   }
 
   if (requireVerifiedNgo && ngoVerification !== 'verified') {
-    return <PendingVerificationState verification={ngoVerification} organisation={ngo?.organisation} />
+    return (
+      <PendingVerificationState
+        verification={ngoVerification}
+        organisation={ngo?.organisation}
+        reviewNote={ngo?.review_note}
+      />
+    )
   }
 
   return children

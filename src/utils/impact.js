@@ -94,6 +94,16 @@ function estimatedKgOf(listing) {
   handover weight by a set of estimates and produce a precise-looking
   percentage built on two incompatible figures.
 */
+/*
+  The statuses that mean "a charity is or will be acting on this". Terminal
+  states are excluded: a delivered, expired or cancelled listing will never
+  change again, so counting it as progress would promise a pickup that is not
+  coming. Mirrors isStillMoving() in utils/listingTimeline.js, which drives
+  polling for the same reason - but kept as its own list because this one is
+  about the donor's ledger and that one is about when to stop fetching.
+*/
+const IN_FLIGHT = ['available', 'claimed', 'picked_up']
+
 export function summariseImpact(listings = []) {
   const byStatus = {}
   for (const status of STATUSES) byStatus[status] = 0
@@ -103,9 +113,23 @@ export function summariseImpact(listings = []) {
   let postedCount = 0
   let deliveredCount = 0
   let removedCount = 0
+  // Tracked separately from byStatus, which is the display tally and
+  // deliberately includes removed rows. See the note on IN_FLIGHT below.
+  let inFlightCount = 0
 
+  /*
+    A null or undefined entry is skipped rather than allowed to throw. The
+    optional chaining on the status line below reads as though it covered the
+    rest of the loop body, and it did not - a single null in the array took the
+    whole aggregate down, so one bad row took the impact page with it. Today's
+    callers pass query.data ?? [], which cannot contain nulls, but this function
+    is also the platform-wide one the partner branch is meant to call over her
+    own row set.
+  */
   for (const listing of listings) {
-    if (listing?.status in byStatus) byStatus[listing.status] += 1
+    if (!listing) continue
+
+    if (listing.status in byStatus) byStatus[listing.status] += 1
 
     if (isRemoved(listing)) {
       removedCount += 1
@@ -119,12 +143,18 @@ export function summariseImpact(listings = []) {
       deliveredCount += 1
       rescuedKg += weightOf(listing)
     }
-  }
 
-  // Still moving: posted, claimed, or collected but not yet handed over. This
-  // is the number that tells a donor their post is not just sitting there
-  // unnoticed, which is the question this page is usually opened to answer.
-  const inFlightCount = byStatus.available + byStatus.claimed + byStatus.picked_up
+    /*
+      Counted here rather than derived from byStatus below, because byStatus
+      counts removed rows and nothing else here does. Deriving it meant an admin
+      taking a listing down ADDED it to "still moving" - so a donor whose food
+      had been reported as unsafe was told it was progressing - and
+      inFlightCount could exceed postedCount, which is not a state that means
+      anything. Every total on the page now excludes removed rows, which is what
+      makes them consistent with each other.
+    */
+    if (IN_FLIGHT.includes(listing.status)) inFlightCount += 1
+  }
 
   return {
     rescuedKg,

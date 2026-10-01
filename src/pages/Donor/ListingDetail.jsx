@@ -40,6 +40,7 @@ export default function ListingDetail() {
   const { data: listing, isLoading, isError, error, refetch } = useListing(id, { live: true })
   const { data: ngo, isLoading: isLoadingNgo } = useClaimingNgo(id, {
     status: listing?.status,
+    claimedBy: listing?.claimed_by,
     live: true,
   })
   const cancelListing = useCancelListing()

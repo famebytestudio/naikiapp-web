@@ -86,7 +86,7 @@ export function FullPageLoader({ label = 'Checking your session' }) {
   donations_select_verified_ngo policy, which hides available listings from
   anyone who is not 'verified'.
 */
-export function PendingVerificationState({ verification, organisation }) {
+export function PendingVerificationState({ verification, organisation, reviewNote }) {
   const meta = NGO_VERIFICATION_META[verification] ?? NGO_VERIFICATION_META.pending
 
   return (
@@ -102,6 +102,22 @@ export function PendingVerificationState({ verification, organisation }) {
           </h1>
 
           <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-slate-600">{meta.blurb}</p>
+
+          {/*
+            The reason an admin was required to write, shown to the charity that
+            has to act on it. VerificationCard makes a rejection note mandatory
+            precisely because "not approved" on its own is not something a
+            charity can act on or appeal - so without this the admin writes
+            something the applicant can never read, and the generic "contact the
+            platform team" is all they get. Reviewed verbatim rather than
+            re-worded: the admin chose those words for this charity.
+          */}
+          {verification === 'rejected' && reviewNote && (
+            <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-left">
+              <p className="text-xs font-bold uppercase tracking-wider text-rose-700">What the reviewer said</p>
+              <p className="mt-2 text-sm leading-relaxed text-rose-900">{reviewNote}</p>
+            </div>
+          )}
 
           {organisation && (
             <p className="mt-4 text-sm font-semibold text-slate-700">
