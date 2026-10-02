@@ -1,3 +1,5 @@
+import { NGO_VERIFICATION_META } from '../utils/roles'
+
 /*
   The three states every data-backed view needs. Built once here rather than
   inlined per page, so create, list and edit cannot drift into three slightly
@@ -78,3 +80,58 @@ export function FullPageLoader({ label = 'Checking your session' }) {
   )
 }
 
+/*
+  Shown to a charity that is not verified yet. This is a state rather than a
+  refusal, so it explains the way through instead of bouncing. It mirrors the
+  donations_select_verified_ngo policy, which hides available listings from
+  anyone who is not 'verified'.
+*/
+export function PendingVerificationState({ verification, organisation, reviewNote }) {
+  const meta = NGO_VERIFICATION_META[verification] ?? NGO_VERIFICATION_META.pending
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <div className="mx-auto flex min-h-screen max-w-xl items-center px-6">
+        <Panel>
+          <span className={`inline-block rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wider ${meta.tone}`}>
+            {meta.label}
+          </span>
+
+          <h1 className="mt-5 font-display text-2xl font-black tracking-tight text-slate-900">
+            {verification === 'rejected' ? 'Your charity is not verified' : 'Your registration is being checked'}
+          </h1>
+
+          <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-slate-600">{meta.blurb}</p>
+
+          {/*
+            The reason an admin was required to write, shown to the charity that
+            has to act on it. VerificationCard makes a rejection note mandatory
+            precisely because "not approved" on its own is not something a
+            charity can act on or appeal - so without this the admin writes
+            something the applicant can never read, and the generic "contact the
+            platform team" is all they get. Reviewed verbatim rather than
+            re-worded: the admin chose those words for this charity.
+          */}
+          {verification === 'rejected' && reviewNote && (
+            <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-left">
+              <p className="text-xs font-bold uppercase tracking-wider text-rose-700">What the reviewer said</p>
+              <p className="mt-2 text-sm leading-relaxed text-rose-900">{reviewNote}</p>
+            </div>
+          )}
+
+          {organisation && (
+            <p className="mt-4 text-sm font-semibold text-slate-700">
+              Registered as <span className="text-slate-900">{organisation}</span>
+            </p>
+          )}
+
+          <p className="mt-6 border-t border-slate-100 pt-5 text-xs leading-relaxed text-slate-500">
+            Browsing available food is limited to verified charities, which is what keeps unsafe or
+            misrepresented pickups off the platform. Sign out and back in at any time to check on the
+            status.
+          </p>
+        </Panel>
+      </div>
+    </div>
+  )
+}

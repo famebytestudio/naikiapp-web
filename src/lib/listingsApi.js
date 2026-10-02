@@ -1,5 +1,7 @@
-import { getSession, DEMO_DONOR_ID } from './authApi'
+import { getSession, DEMO_ADMIN_ID, DEMO_DONOR_ID, DEMO_NGO_ID, DEMO_VENDOR_ID } from './authApi'
 import { canCancel, canEdit } from '../utils/listingStatus'
+import { canRemove, closedReason, isRemoved, REMOVAL_REASON_MAX } from '../utils/moderation'
+import { ANONYMOUS_DONOR_LABEL, isAnonymousDonor, publishedContactName } from '../utils/anonymity'
 
 /*
   ============================================================================
@@ -25,7 +27,9 @@ import { canCancel, canEdit } from '../utils/listingStatus'
 
   What is deliberately NOT mocked away: the write rules. canEdit/canCancel are
   the same predicates the RLS policies enforce, so the UI cannot offer an action
-  the database would refuse.
+  the database would refuse. The admin moderation section at the bottom is built
+  the same way, against the policies in migration 0006 - including the part that
+  is awkward to mock: a removed listing is frozen for its own donor too.
   ============================================================================
 */
 
@@ -69,6 +73,10 @@ function seedListings(now) {
     delivered_at: null,
     delivered_kg: null,
     cancelled_at: null,
+    // Added by migration 0006. Null on every row that has not been moderated.
+    removed_at: null,
+    removed_by: null,
+    removal_reason: null,
   }
 
   return [
@@ -110,6 +118,7 @@ function seedListings(now) {
       contact_name: 'Ayesha Siddiqui',
       contact_phone: '0321 7654321',
       status: 'claimed',
+      claimed_by: DEMO_NGO_ID,
       claimed_at: new Date(now - 8 * MINUTE).toISOString(),
       created_at: new Date(now - 40 * MINUTE).toISOString(),
     },
@@ -131,6 +140,7 @@ function seedListings(now) {
       contact_name: 'Bilal Ahmed',
       contact_phone: '0333 9876543',
       status: 'picked_up',
+      claimed_by: DEMO_NGO_ID,
       claimed_at: new Date(now - 4 * HOUR).toISOString(),
       picked_up_at: new Date(now - 70 * MINUTE).toISOString(),
       created_at: new Date(now - 6 * HOUR).toISOString(),
@@ -153,6 +163,7 @@ function seedListings(now) {
       contact_name: 'Imran Shah',
       contact_phone: '0300 1234567',
       status: 'delivered',
+      claimed_by: DEMO_NGO_ID,
       claimed_at: new Date(now - 9 * HOUR).toISOString(),
       picked_up_at: new Date(now - 7 * HOUR).toISOString(),
       delivered_at: new Date(now - 5 * HOUR).toISOString(),
@@ -179,6 +190,83 @@ function seedListings(now) {
       status: 'cancelled',
       cancelled_at: new Date(now - 90 * MINUTE).toISOString(),
       created_at: new Date(now - 3 * HOUR).toISOString(),
+    },
+
+    /*
+      A second donor, so the moderation queue is not just the account you are
+      signed in as. A queue you can only ever moderate your own posts against
+      would pass its demo and fail its job.
+    */
+    {
+      ...base,
+      id: '66666666-6666-4666-8666-666666666666',
+      donor_id: DEMO_VENDOR_ID,
+      title: 'Roti and sabzi from the bakery round',
+      description: 'Baked an hour ago, sealed in sacks. Pickup from the back gate.',
+      food_type: 'bakery',
+      quantity_value: 60,
+      quantity_unit: 'packs',
+      estimated_kg: 32,
+      expiry_at: new Date(now + 8 * HOUR).toISOString(),
+      pickup_start_at: new Date(now + 30 * MINUTE).toISOString(),
+      pickup_end_at: new Date(now + 4 * HOUR).toISOString(),
+      city: 'Karachi',
+      area: 'North Nazimabad',
+      address: 'Shop 14, Block D, North Nazimabad',
+      contact_name: ANONYMOUS_DONOR_LABEL,
+      contact_phone: '0321 555 0173',
+      status: 'available',
+      created_at: new Date(now - 25 * MINUTE).toISOString(),
+    },
+    {
+      ...base,
+      id: '99999999-9999-4999-8999-999999999999',
+      donor_id: DEMO_VENDOR_ID,
+      title: 'Cheap weight loss supplement - 90% off, order on WhatsApp',
+      description:
+        'Not food. Posted into the food feed to see what an admin does with it. Stock is limited, message 0300-9998887 for prices and delivery.',
+      food_type: 'other',
+      quantity_value: 200,
+      quantity_unit: 'boxes',
+      estimated_kg: 90,
+      expiry_at: new Date(now + 30 * HOUR).toISOString(),
+      pickup_start_at: new Date(now + HOUR).toISOString(),
+      pickup_end_at: new Date(now + 20 * HOUR).toISOString(),
+      city: 'Karachi',
+      area: 'Korangi',
+      address: 'Flat 2, Block 5, Korangi',
+      contact_name: ANONYMOUS_DONOR_LABEL,
+      contact_phone: '0321 555 0173',
+      status: 'available',
+      created_at: new Date(now - 12 * MINUTE).toISOString(),
+    },
+    {
+      ...base,
+      id: '88888888-8888-4888-8888-888888888888',
+      donor_id: DEMO_VENDOR_ID,
+      title: 'Yesterday\'s biryani, half price',
+      description: 'Left over from a buffet. Pickup tonight, no questions.',
+      food_type: 'cooked',
+      quantity_value: 80,
+      quantity_unit: 'plates',
+      estimated_kg: 40,
+      // Expired an hour ago but still sitting in the feed as 'available' -
+      // exactly the listing a charity would turn up for and find nothing.
+      expiry_at: new Date(now - 60 * MINUTE).toISOString(),
+      pickup_start_at: new Date(now - 2 * HOUR).toISOString(),
+      pickup_end_at: new Date(now - 30 * MINUTE).toISOString(),
+      city: 'Karachi',
+      area: 'Gulshan-e-Hadeed',
+      address: 'Warehouse 6, Industrial Area',
+      contact_name: ANONYMOUS_DONOR_LABEL,
+      contact_phone: '0321 555 0173',
+      status: 'available',
+      created_at: new Date(now - 4 * HOUR).toISOString(),
+      // Seeded already removed, so the queue opens with a decision on record and
+      // the restore path is reachable without making one first.
+      removed_at: new Date(now - 55 * MINUTE).toISOString(),
+      removed_by: DEMO_ADMIN_ID,
+      removal_reason: 'Expired food offered as fresh. Pickup window had already closed.',
     },
   ]
 }
@@ -235,7 +323,20 @@ export async function getById(id) {
   const session = requireSession()
 
   const listing = readListings().find((row) => row.id === id)
-  return listing && canRead(listing, session) ? listing : null
+  if (!listing || !canRead(listing, session)) return null
+
+  // A real SELECT under donations_select_verified_ngo returns contact_name as
+  // stored, so this is only a second line of defence - the 0013 trigger already
+  // masked it at write time. It stays because a row seeded before that trigger
+  // was applied would otherwise keep handing a charity a name, and this is the
+  // one function where being wrong is a privacy failure rather than a wrong
+  // label. Only the donor's own row is passed through untouched, so the donor
+  // still sees the contact name they typed.
+  if (listing.donor_id !== session.user.id) {
+    return { ...listing, contact_name: publishedContactName(listing) }
+  }
+
+  return listing
 }
 
 /* ----------------------------------------------------------------- write */
@@ -272,6 +373,15 @@ export async function create(values) {
     updated_at: now,
   }
 
+  // Mirrors the BEFORE INSERT trigger of the same name in migration 0013: an
+  // anonymous donor's contact_name is replaced before the row is stored, rather
+  // than at the moment somebody remembers to render it. Done here rather than in
+  // a read path because the read path is exactly where it went wrong - canRead()
+  // below hands a whole listing to a verified charity, contact_name included.
+  if (isAnonymousDonor(session.profile)) {
+    donation.contact_name = ANONYMOUS_DONOR_LABEL
+  }
+
   writeListings([donation, ...readListings()])
   return donation
 }
@@ -305,6 +415,7 @@ export async function update(id, values) {
   const index = findWritable(listings, id)
 
   const current = listings[index]
+  requireNotRemoved(current)
   if (!canEdit(current.status)) {
     throw new Error('This listing can no longer be edited. Cancel it and post a new one instead.')
   }
@@ -330,16 +441,164 @@ export async function cancel(id) {
   const index = findWritable(listings, id)
 
   const current = listings[index]
+  // A removed listing is frozen, so it is not the donor's to cancel either.
+  requireNotRemoved(current)
   if (!canCancel(current.status)) {
-    throw new Error(
-      current.status === 'picked_up' || current.status === 'delivered'
-        ? 'This food has already been collected, so it can no longer be cancelled.'
-        : 'This listing is closed and can no longer be cancelled.',
-    )
+    // closedReason() knows picked_up and delivered apart from the statuses that
+    // were simply closed, so a donor is not told a charity collected food that
+    // never left their kitchen.
+    throw new Error(`${closedReason(current.status).replace(/\.$/, '')}, so it can no longer be cancelled.`)
   }
 
   const now = new Date().toISOString()
   const next = { ...current, status: 'cancelled', cancelled_at: now, updated_at: now }
+
+  listings[index] = next
+  writeListings(listings)
+  return next
+}
+
+/* ---------------------------------------------------------- admin moderation */
+
+/*
+  ---------------------------------------------------------------------------
+  ADMIN: THE QUEUE AND THE REMOVAL
+  ---------------------------------------------------------------------------
+
+  Migration 0006 opened exactly two write surfaces for an admin. Both are here,
+  and both are enforced with the same predicates the policies enforce, so the
+  moderation screen cannot offer an action the database would refuse:
+
+    - donations_update_admin_removal - an admin may update the removal columns
+      on a listing that is still available or claimed, and nothing else.
+    - donations_select_admin - already modelled by canRead() above.
+
+  The awkward part of 0006 is the guard_donation_removal trigger: because RLS
+  policies for UPDATE are OR'ed, a removed listing is still matched by its own
+  donor's donations_update_own_available policy, so RLS alone would let that
+  donor edit the evidence an admin acted on, or clear removed_at and put it
+  back on the feed. requireNotRemoved() is that trigger's second rule in the
+  mock - a removed row is frozen for everyone except an admin.
+*/
+
+/*
+  The admin's view: every listing on the platform, whoever posted it, newest
+  first. The role is re-checked here rather than trusted from the route, because
+  a page is not a boundary - RequireRole is a convenience and this is the check
+  that matches donations_select_admin.
+*/
+export async function listAll() {
+  await latency()
+  const session = requireSession()
+
+  if (session.profile?.role !== 'admin') {
+    throw new Error('Only an admin can see every listing on the platform.')
+  }
+
+  return [...readListings()].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+}
+
+/*
+  The rule the 0006 trigger shares with update() and cancel(): once a listing is
+  removed it is frozen for its donor. An admin can restore it; the donor cannot
+  edit their way out of a decision.
+*/
+function requireNotRemoved(listing) {
+  if (isRemoved(listing)) {
+    throw new Error('This listing was taken down by NaikiApp and can no longer be changed.')
+  }
+}
+
+/*
+  Take a listing down.
+
+  Three refusals, in the order they bite:
+
+    1. Not an admin. Same reason as listAll().
+    2. Already removed, or past pickup. canRemove() is the same list the
+       policy's USING clause uses - a listing the food has already left for
+       cannot be moderated, because its delivered weight is the only record of
+       impact the platform has.
+    3. No reason. A reason is required by the UI, and the column is nullable in
+       the schema, so the constraint is deliberately made here rather than left
+       to a null the moderator would have to notice later.
+
+  removal_reason is written as submitted and removed_by is stamped from the
+  session, mirroring the trigger: the client does not get to say who did it.
+*/
+export async function removeListing(id, { reason } = {}) {
+  await latency()
+  const session = requireSession()
+
+  if (session.profile?.role !== 'admin') {
+    throw new Error('Only an admin can remove a listing.')
+  }
+
+  const listings = readListings()
+  const index = listings.findIndex((listing) => listing.id === id)
+  if (index === -1) throw new Error('That listing no longer exists.')
+
+  const current = listings[index]
+  if (isRemoved(current)) throw new Error('That listing has already been removed.')
+
+  if (!canRemove(current.status)) {
+    // Same reason string the moderator was shown on the disabled button, so the
+    // two never contradict each other if a write is attempted anyway.
+    throw new Error(closedReason(current.status))
+  }
+
+  const trimmed = String(reason ?? '').trim()
+  if (!trimmed) throw new Error('Say why the listing is being taken down.')
+  if (trimmed.length > REMOVAL_REASON_MAX) {
+    throw new Error(`Keep the reason under ${REMOVAL_REASON_MAX} characters.`)
+  }
+
+  const now = new Date().toISOString()
+  const next = {
+    ...current,
+    removed_at: now,
+    removed_by: session.user.id,
+    removal_reason: trimmed,
+    updated_at: now,
+  }
+
+  listings[index] = next
+  writeListings(listings)
+  return next
+}
+
+/*
+  Undo a removal and put the listing back on the feed.
+
+  The status is untouched, so restoring a listing that was 'available' when it
+  was taken down makes it claimable again exactly as before. It is NOT a check
+  that the food is still safe: the pickup window may have passed while the
+  listing was down, and the expire-listings sweep is what owns that call. The
+  copy on the confirm button says so, rather than implying the row is fresh.
+*/
+export async function restoreListing(id) {
+  await latency()
+  const session = requireSession()
+
+  if (session.profile?.role !== 'admin') {
+    throw new Error('Only an admin can restore a listing.')
+  }
+
+  const listings = readListings()
+  const index = listings.findIndex((listing) => listing.id === id)
+  if (index === -1) throw new Error('That listing no longer exists.')
+
+  const current = listings[index]
+  if (!isRemoved(current)) throw new Error('That listing is not removed.')
+
+  const now = new Date().toISOString()
+  const next = {
+    ...current,
+    removed_at: null,
+    removed_by: null,
+    removal_reason: null,
+    updated_at: now,
+  }
 
   listings[index] = next
   writeListings(listings)

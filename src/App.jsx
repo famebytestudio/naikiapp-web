@@ -2,18 +2,19 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 
 import RequireRole from './components/RequireRole'
-import SignOutButton from './components/SignOutButton'
 import { AuthProvider } from './context/AuthContext'
 import ListingsOverview from './pages/Admin/ListingsOverview'
+import NgoVerification from './pages/Admin/NgoVerification'
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
 import ImpactDashboard from './pages/Dashboard/ImpactDashboard'
 import CreateListing from './pages/Donor/CreateListing'
 import EditListing from './pages/Donor/EditListing'
+import DonorListingDetail from './pages/Donor/ListingDetail'
+import MyImpact from './pages/Donor/MyImpact'
 import MyListings from './pages/Donor/MyListings'
 import Landing from './pages/Landing'
 import Feed from './pages/Ngo/Feed'
-import ListingDetail from './pages/Ngo/ListingDetail'
 import MyClaims from './pages/Ngo/MyClaims'
 
 const queryClient = new QueryClient({
@@ -73,10 +74,26 @@ export default function App() {
               }
             />
             <Route
+              path="/donor/impact"
+              element={
+                <RequireRole roles={['donor']}>
+                  <MyImpact />
+                </RequireRole>
+              }
+            />
+            <Route
               path="/donor/listings/new"
               element={
                 <RequireRole roles={['donor']}>
                   <CreateListing />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/donor/listings/:id"
+              element={
+                <RequireRole roles={['donor']}>
+                  <DonorListingDetail />
                 </RequireRole>
               }
             />
@@ -93,7 +110,7 @@ export default function App() {
             <Route
               path="/ngo/feed"
               element={
-                <RequireRole roles={['ngo']}>
+                <RequireRole roles={['ngo']} requireVerifiedNgo>
                   <Feed />
                 </RequireRole>
               }
@@ -122,6 +139,14 @@ export default function App() {
               element={
                 <RequireRole roles={['admin']}>
                   <ListingsOverview />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/admin/ngo-verification"
+              element={
+                <RequireRole roles={['admin']}>
+                  <NgoVerification />
                 </RequireRole>
               }
             />

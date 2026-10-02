@@ -1,5 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { useMyListings } from './useListings'
+import { summariseImpact } from '../utils/impact'
 
 const emptyStats = {
 	rescues: 0,
@@ -17,6 +19,8 @@ const toNumber = (value) => {
 }
 
 export function useImpact() {
+	const query = useMyListings()
+	const impact = useMemo(() => summariseImpact(query.data ?? []), [query.data])
 	const [stats, setStats] = useState(emptyStats)
 	const [loading, setLoading] = useState(Boolean(supabase))
 	const [error, setError] = useState('')
@@ -87,5 +91,5 @@ export function useImpact() {
 		return () => supabase.removeChannel(channel)
 	}, [loadImpact])
 
-	return { stats, loading, error }
+	return { ...query, impact, stats, loading, error: error || query.error }
 }

@@ -34,6 +34,26 @@ export const ROLE_META = {
   },
 }
 
+export const NGO_VERIFICATIONS = ['pending', 'verified', 'rejected']
+
+export const NGO_VERIFICATION_META = {
+  pending: {
+    label: 'Awaiting verification',
+    tone: 'bg-amber-500/10 text-amber-700 border-amber-500/20',
+    blurb: 'An admin is checking your registration. You will be able to browse available food as soon as it is approved.',
+  },
+  verified: {
+    label: 'Verified',
+    tone: 'bg-emerald-500/10 text-emerald-700 border-emerald-500/20',
+    blurb: 'You can claim food and post deliveries.',
+  },
+  rejected: {
+    label: 'Not verified',
+    tone: 'bg-rose-500/10 text-rose-700 border-rose-500/20',
+    blurb: 'Your registration was not approved. Check the details you submitted and contact the platform team.',
+  },
+}
+
 export function isRole(value) {
   return ROLES.includes(value)
 }
@@ -51,5 +71,9 @@ export function roleLabel(role) {
 */
 export function homeForRole(role) {
   return ROLE_META[role]?.home ?? '/'
+}
+
+export function ngoVerificationLabel(verification) {
+  return NGO_VERIFICATION_META[verification]?.label ?? verification
 }
 

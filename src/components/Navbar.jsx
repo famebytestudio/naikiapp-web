@@ -2,6 +2,7 @@ import { NavLink, Link } from 'react-router-dom'
 
 import { useAuth } from '../context/useAuth'
 import { homeForRole, ROLE_META } from '../utils/roles'
+import { ANONYMOUS_DONOR_LABEL } from '../utils/anonymity'
 import SignOutButton from './SignOutButton'
 
 /*
@@ -16,6 +17,7 @@ import SignOutButton from './SignOutButton'
 const NAV_BY_ROLE = {
   donor: [
     ['/donor/listings', 'My listings'],
+    ['/donor/impact', 'My impact'],
     ['/donor/listings/new', 'Post food'],
   ],
   ngo: [
@@ -24,6 +26,7 @@ const NAV_BY_ROLE = {
   ],
   admin: [
     ['/admin/listings', 'All listings'],
+    ['/admin/ngo-verification', 'Verify NGOs'],
   ],
 }
 
@@ -40,9 +43,12 @@ export default function Navbar() {
     even in their own navbar - the preference is a promise about how they are
     seen, and honouring it in the one place they are looking at themselves costs
     nothing and keeps the rule honest.
+
+    donorDisplayName() owns that decision; this only adds the two role-specific
+    details. See utils/anonymity.js for why the rule is not inlined here.
   */
   function identity() {
-    if (isAnonymous) return { name: 'Anonymous Donor', detail: 'Name hidden' }
+    if (isAnonymous) return { name: ANONYMOUS_DONOR_LABEL, detail: 'Name hidden' }
     if (role === 'admin') return { name: profile?.full_name ?? 'Platform admin', detail: 'Admin' }
     return { name: profile?.full_name, detail: profile?.organisation }
   }

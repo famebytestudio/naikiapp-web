@@ -7,6 +7,7 @@ import Navbar from '../../components/Navbar'
 import { EmptyState, ErrorState, LoadingState } from '../../components/PageState'
 import { useCancelListing, useMyListings } from '../../hooks/useListings'
 import { formatKg } from '../../utils/formatKg'
+import { summariseImpact } from '../../utils/impact'
 import { STATUS_META, STATUSES } from '../../utils/listingStatus'
 
 const TABS = [{ value: 'all', label: 'All' }, ...STATUSES.map((status) => ({ value: status, label: STATUS_META[status].label }))]
@@ -18,10 +19,15 @@ export default function MyListings() {
 
   const items = useMemo(() => listings ?? [], [listings])
 
+  // Unknown statuses are skipped rather than tallied: the status contract is
+  // shared with the NGO branch, so a value that drifts would otherwise render a
+  // literal NaN in the tab count.
   const counts = useMemo(() => {
     const tally = { all: items.length }
     for (const status of STATUSES) tally[status] = 0
-    for (const listing of items) tally[listing.status] += 1
+    for (const listing of items) {
+      if (listing.status in tally) tally[listing.status] += 1
+    }
     return tally
   }, [items])
 
@@ -29,11 +35,19 @@ export default function MyListings() {
   // not get an empty "Delivered" view.
   const tabs = TABS.filter((tab) => tab.value === 'all' || counts[tab.value] > 0)
 
-  const visible = filter === 'all' ? items : items.filter((listing) => listing.status === filter)
+  /*
+    Cancelling the last listing in the active filter removes that tab, which
+    would otherwise strand the donor on a filter with no button highlighted and
+    nothing to click back out of. Clamping to 'all' when the tab is gone keeps
+    the view and the highlighted tab in agreement, and needs no effect.
+  */
+  const activeFilter = tabs.some((tab) => tab.value === filter) ? filter : 'all'
 
-  const rescuedKg = items
-    .filter((listing) => listing.status === 'delivered')
-    .reduce((total, listing) => total + Number(listing.delivered_kg ?? listing.estimated_kg), 0)
+  const visible = activeFilter === 'all' ? items : items.filter((listing) => listing.status === activeFilter)
+
+  // The header total and /donor/impact must agree, so both read the same rule
+  // rather than each summing delivered_kg themselves.
+  const rescuedKg = summariseImpact(items).rescuedKg
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -67,7 +81,7 @@ export default function MyListings() {
                 type="button"
                 onClick={() => setFilter(tab.value)}
                 className={`rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-wider transition ${
-                  filter === tab.value
+                  activeFilter === tab.value
                     ? 'border-slate-900 bg-slate-900 text-white'
                     : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
                 }`}
@@ -86,7 +100,7 @@ export default function MyListings() {
             <ErrorState error={error} onRetry={refetch} title="Could not load your listings" />
           ) : visible.length === 0 ? (
             <EmptyState
-              title={items.length === 0 ? 'No food posted yet' : `Nothing ${STATUS_META[filter]?.label.toLowerCase() ?? ''}`}
+              title={items.length === 0 ? 'No food posted yet' : `Nothing ${STATUS_META[activeFilter]?.label.toLowerCase() ?? ''}`}
               description={
                 items.length === 0
                   ? 'Post your surplus food and a local charity can claim it within minutes.'
@@ -117,6 +131,7 @@ export default function MyListings() {
                 <DonationCard
                   key={listing.id}
                   listing={listing}
+                  to={`/donor/listings/${listing.id}`}
                   onCancel={cancelListing.mutateAsync}
                   isCancelling={cancelListing.isPending && cancelListing.variables === listing.id}
                 />

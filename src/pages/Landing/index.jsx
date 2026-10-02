@@ -6,6 +6,7 @@ import SignOutButton from '../../components/SignOutButton'
 import { useAuth } from '../../context/useAuth'
 import { useImpact } from '../../hooks/useImpact'
 import { useNow } from '../../hooks/useNow'
+import { ANONYMOUS_DONOR_LABEL } from '../../utils/anonymity'
 
 /*
   NaikiApp Web - landing page (Premium Styled)
@@ -29,7 +30,7 @@ const DEMO_LISTINGS = [
   },
   {
     id: 2,
-    donor: 'Anonymous Donor',
+    donor: ANONYMOUS_DONOR_LABEL,
     food: 'Fresh bread and rusk',
     type: 'Packaged',
     plates: 40,

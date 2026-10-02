@@ -78,6 +78,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuth } from '../context/useAuth'
 import { cancel, create, getById, listMine, update } from '../lib/listingsApi'
+import { getClaimingNgo } from '../lib/ngoApi'
+import { isStillMoving } from '../utils/listingTimeline'
 
 /*
   All data fetching for the donor portal lives here, per the architecture in
@@ -108,7 +110,19 @@ export function useMyListings({ enabled = true } = {}) {
   })
 }
 
-export function useListing(id) {
+/*
+  `live` polls while the listing is still moving, and stops the moment it cannot
+  move again. The donor's detail page is the only caller: a donor watching a van
+  is the one user actively waiting for someone else's write to land, and 15s is
+  the same cadence the CountdownTag clock already ticks at, so the screen
+  updates in step with its own countdown.
+
+  A terminal listing - delivered, expired, cancelled - never transitions again,
+  so polling it would be traffic against a number that cannot change.
+*/
+const LIVE_POLL_MS = 15_000
+
+export function useListing(id, { live = false } = {}) {
   const { isAuthenticated, user } = useAuth()
   const userId = user?.id ?? null
 
@@ -116,6 +130,56 @@ export function useListing(id) {
     queryKey: listingKeys.detail(userId, id),
     queryFn: () => getById(id),
     enabled: Boolean(id) && isAuthenticated && Boolean(userId),
+    refetchInterval: live ? LIVE_POLL_MS : false,
+  })
+}
+
+export const claimingNgoKeys = {
+  byDonation: (userId, donationId) => ['ngo', userId, 'claiming', donationId],
+}
+
+/*
+  The charity that claimed a listing, as the donor sees it.
+
+  Disabled until a claimed_by is actually known, so an available listing never
+  fires a lookup that could only come back null - and so the RLS refusal in
+  ngoApi.js is never the thing standing between a donor and a page that renders.
+
+  null is a legitimate answer here, not an error: an unclaimed listing, a listing
+  owned by somebody else, and a listing pointing at a charity that is no longer
+  on file all resolve to null, exactly as they would under the 0007 policies. The
+  components treat null as "nobody has claimed this yet" rather than surfacing
+  an error the donor can do nothing about.
+
+  Polled on the same 15s cadence as the listing itself, and only while it is
+  still moving, so a donor watching a pickup sees a verification change without
+  reloading.
+*/
+export function useClaimingNgo(donationId, { status, claimedBy, live = false } = {}) {
+  const { isAuthenticated, user } = useAuth()
+  const userId = user?.id ?? null
+
+  return useQuery({
+    queryKey: claimingNgoKeys.byDonation(userId, donationId),
+    queryFn: () => getClaimingNgo(donationId),
+    /*
+      Gated on claimedBy rather than on the donation id alone, which is what the
+      note above describes. getClaimingNgo() re-derives the claim from the store
+      and returns null for an unclaimed listing, so without this gate an
+      available listing fired a lookup whose only possible answer was null.
+
+      Reading the claim off the caller's listing rather than accepting it is
+      still what ngoApi.js enforces - this is purely a "don't ask when there is
+      nothing to ask about" guard, and a forged claimedBy buys nothing because
+      the lookup re-derives it.
+
+      Gating on claimedBy is also what lets the query start on its own. The
+      listing is polled every 15s while it is moving, so the moment a charity
+      claims it claimedBy becomes non-null, enabled flips to true, and the
+      charity card appears without the donor reloading.
+    */
+    enabled: Boolean(donationId) && Boolean(claimedBy) && isAuthenticated && Boolean(userId),
+    refetchInterval: live && isStillMoving(status) ? 15_000 : false,
   })
 }
 

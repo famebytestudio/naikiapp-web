@@ -55,7 +55,15 @@ function LoginForm() {
     setPending(true)
     try {
       const session = await signIn(values)
-      navigate(location.state?.from ?? homeForRole(session.profile.role), { replace: true })
+      // Optional-chained like every other read of session.profile, and for the
+      // same reason AuthContext.jsx guards its own. A session with no profile row
+      // is reachable the moment this mock is swapped for Supabase Auth - an auth
+      // user created outside the signup trigger has no profiles row, so
+      // session.profile is null and the unguarded dereference threw before it
+      // could route anywhere. homeForRole already answers an unknown role with
+      // the public landing page, so a profileless session lands somewhere safe
+      // instead of failing at the exact moment the user expects to be signed in.
+      navigate(location.state?.from ?? homeForRole(session?.profile?.role), { replace: true })
     } catch (error) {
       setFormError(error.message)
     } finally {

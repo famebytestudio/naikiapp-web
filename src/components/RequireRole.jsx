@@ -2,7 +2,7 @@ import { Navigate, useLocation } from 'react-router-dom'
 
 import { useAuth } from '../context/useAuth'
 import { homeForRole } from '../utils/roles'
-import { FullPageLoader } from './PageState'
+import { FullPageLoader, PendingVerificationState } from './PageState'
 
 /*
   Role guard. The role is read from the profile record, never from user metadata,
@@ -15,8 +15,8 @@ import { FullPageLoader } from './PageState'
   Role access is also enforced by the database policies; this guard keeps users
   in the right part of the application and is not a substitute for RLS.
 */
-export default function RequireRole({ roles, children }) {
-  const { isAuthenticated, loading, role } = useAuth()
+export default function RequireRole({ roles, requireVerifiedNgo = false, children }) {
+  const { isAuthenticated, loading, role, ngo } = useAuth()
   const location = useLocation()
 
   if (loading) return <FullPageLoader />
@@ -29,6 +29,16 @@ export default function RequireRole({ roles, children }) {
     // Replace, so the forbidden URL does not sit in history waiting for Back to
     // bounce them here again.
     return <Navigate to={homeForRole(role)} replace />
+  }
+
+  if (requireVerifiedNgo && ngo?.verification !== 'verified') {
+    return (
+      <PendingVerificationState
+        verification={ngo?.verification}
+        organisation={ngo?.organisation}
+        reviewNote={ngo?.review_note}
+      />
+    )
   }
 
   return children

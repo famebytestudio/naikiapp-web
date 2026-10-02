@@ -17,8 +17,9 @@ import { homeForRole, isRole } from '../../utils/roles'
   could send that would create an admin, and authApi throws if one is attempted.
   Platform staff are promoted out of band.
 
-  Charities can browse and claim available food as soon as they create an
-  account.
+  A charity that registers here arrives 'pending' and is kept out of the
+  available-food feed until an admin approves it, which is the same constraint
+  the ngo_details_insert_own policy applies on a real database.
 */
 const ACCOUNT_TYPES = [
   {
@@ -29,13 +30,14 @@ const ACCOUNT_TYPES = [
   {
     value: 'ngo',
     label: 'I represent a charity',
-    blurb: 'Browse and claim available food for your community.',
+    blurb: 'Register the charity, then get verified to claim food.',
   },
 ]
 
 const EMPTY = {
   full_name: '',
   organisation: '',
+  registration_number: '',
   phone: '',
   email: '',
   password: '',
@@ -92,7 +94,12 @@ function SignupForm() {
     setPending(true)
     try {
       const session = await signUp(values)
-      navigate(location.state?.from ?? homeForRole(session.profile.role), { replace: true })
+      // A new charity lands on the verification notice rather than the feed,
+      // which is the honest first screen for a pending account.
+      // Guarded the same way Login.jsx guards it - see the note there. A signup
+      // whose handle_new_user() trigger did not fire returns a session with no
+      // profile, and that must not be a TypeError on the way to first login.
+      navigate(location.state?.from ?? homeForRole(session?.profile?.role), { replace: true })
     } catch (error) {
       setFormError(error.message)
     } finally {
@@ -163,8 +170,20 @@ function SignupForm() {
           value={values.organisation}
           onChange={update('organisation')}
           error={errors.organisation}
-          hint={isNgo ? 'The name your charity uses publicly.' : undefined}
+          hint={isNgo ? 'The name your charity is registered under. An admin checks it against your registration number.' : undefined}
         />
+
+        {isNgo && (
+          <AuthField
+            id="registration_number"
+            label="Registration number (optional)"
+            placeholder="LRT-2019-4412"
+            value={values.registration_number}
+            onChange={update('registration_number')}
+            error={errors.registration_number}
+            hint="Having this to hand speeds up verification."
+          />
+        )}
 
         <AuthField
           id="email"
@@ -215,7 +234,7 @@ function SignupForm() {
 
         <p className="text-xs leading-relaxed text-slate-500">
           Platform staff accounts are created by the NaikiApp team rather than signed up for, so there is
-          no admin option here.
+          no admin option here. {isNgo && 'Your charity starts as pending and can browse food once an admin approves it.'}
         </p>
       </form>
     </AuthShell>
