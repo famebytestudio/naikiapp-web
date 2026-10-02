@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../context/useAuth'
 import { listMyClaims, updateClaimStatus as updateMockClaimStatus } from '../lib/listingsApi'
 import { supabase } from '../lib/supabaseClient'
@@ -22,43 +23,33 @@ const normalizeClaim = (row) => {
 }
 
 export function useClaims() {
-	const { isDemoBackend } = useAuth()
-	const [claims, setClaims] = useState([])
-	const [loading, setLoading] = useState(true)
-	const [error, setError] = useState('')
-
-	const loadClaims = useCallback(async () => {
-		if (isDemoBackend || !supabase) {
-			try {
-				const data = await listMyClaims()
-				setClaims(data.map(normalizeClaim))
-				setError('')
-			} catch (queryError) {
-				setClaims([])
-				setError(queryError.message)
+	const { isDemoBackend, isAuthenticated, role, user } = useAuth()
+	const queryClient = useQueryClient()
+	const userId = user?.id ?? null
+	const queryKey = ['claims', userId]
+	const query = useQuery({
+		queryKey,
+		enabled: isAuthenticated && role === 'ngo',
+		queryFn: async () => {
+			if (isDemoBackend || !supabase) {
+				return (await listMyClaims()).map(normalizeClaim)
 			}
-			setLoading(false)
-			return
-		}
 
-		const { data, error: queryError } = await supabase
-			.from('donation_claims')
-			.select('donation_id, ngo_id, claimed_at, donations (*)')
-			.order('claimed_at', { ascending: false })
-
-		if (queryError) setError(queryError.message)
-		else {
-			setClaims((data ?? []).map(normalizeClaim))
-			setError('')
-		}
-		setLoading(false)
-	}, [isDemoBackend])
+			const { data, error } = await supabase
+				.from('donation_claims')
+				.select('donation_id, ngo_id, claimed_at, donations (*)')
+				.order('claimed_at', { ascending: false })
+			if (error) throw error
+			return (data ?? []).map(normalizeClaim)
+		},
+	})
+	const refetchClaims = query.refetch
 
 	const updateStatus = useCallback(async (donationId, status, actualKg = null) => {
 		if (isDemoBackend || !supabase) {
 			try {
 				await updateMockClaimStatus(donationId, status, actualKg)
-				await loadClaims()
+				await refetchClaims()
 				return { error: null }
 			} catch (error) {
 				return { error }
@@ -70,22 +61,31 @@ export function useClaims() {
 			p_next_status: status,
 			p_actual_kg: actualKg,
 		})
-		if (!updateError) await loadClaims()
+		if (!updateError) await refetchClaims()
 		return { error: updateError }
-	}, [isDemoBackend, loadClaims])
+	}, [isDemoBackend, refetchClaims])
 
 	useEffect(() => {
-		loadClaims()
 		if (isDemoBackend || !supabase) return undefined
 
 		const channel = supabase
 			.channel('ngo-claims')
-			.on('postgres_changes', { event: '*', schema: 'public', table: 'donations' }, loadClaims)
-			.on('postgres_changes', { event: '*', schema: 'public', table: 'donation_status_log' }, loadClaims)
+			.on('postgres_changes', { event: '*', schema: 'public', table: 'donations' }, () => {
+				queryClient.invalidateQueries({ queryKey: ['claims', userId] })
+			})
+			.on('postgres_changes', { event: '*', schema: 'public', table: 'donation_status_log' }, () => {
+				queryClient.invalidateQueries({ queryKey: ['claims', userId] })
+			})
 			.subscribe()
 
 		return () => supabase.removeChannel(channel)
-	}, [isDemoBackend, loadClaims])
+	}, [isDemoBackend, queryClient, userId])
 
-	return { claims, loading, error, refresh: loadClaims, updateStatus }
+	return {
+		claims: query.data ?? [],
+		loading: query.isLoading,
+		error: query.error?.message ?? '',
+		refresh: query.refetch,
+		updateStatus,
+	}
 }

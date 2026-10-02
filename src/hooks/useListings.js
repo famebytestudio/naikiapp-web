@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useAuth } from '../context/useAuth'
 import { supabase } from '../lib/supabaseClient'
 import { listAvailable } from '../lib/listingsApi'
@@ -34,49 +34,47 @@ export function normalizeListing(row) {
 }
 
 export function useListings() {
-  const { isDemoBackend } = useAuth()
-  const [listings, setListings] = useState([])
-  const [loading, setLoading] = useState(true)
-	const [error, setError] = useState('')
-
-	const loadListings = useCallback(async () => {
-    if (isDemoBackend || !supabase) {
-      try {
-        const data = await listAvailable()
-        setListings(data.map(normalizeListing))
-        setError('')
-      } catch (queryError) {
-        setListings([])
-        setError(queryError.message)
+  const { isDemoBackend, isAuthenticated, role, ngo, user } = useAuth()
+  const queryClient = useQueryClient()
+  const userId = user?.id ?? null
+  const queryKey = ['donations', userId, 'ngo-available']
+  const query = useQuery({
+    queryKey,
+    queryFn: async () => {
+      if (isDemoBackend || !supabase) {
+        return (await listAvailable()).map(normalizeListing)
       }
-			setLoading(false)
-			return
-		}
 
-		const { data, error: queryError } = await supabase.from('donations').select('*').order('expiry_at', { ascending: true })
-		if (queryError) {
-			setError(queryError.message)
-		} else {
-			const now = Date.now()
-			setListings((data ?? []).map(normalizeListing).filter((listing) => listing.status === 'available' && (!listing.expiresAt || new Date(listing.expiresAt).getTime() > now)))
-			setError('')
-		}
-		setLoading(false)
-  }, [isDemoBackend])
+      const { data, error } = await supabase.from('donations').select('*').order('expiry_at', { ascending: true })
+      if (error) throw error
+
+      const now = Date.now()
+      return (data ?? []).map(normalizeListing).filter((listing) =>
+        listing.status === 'available' && (!listing.expiresAt || new Date(listing.expiresAt).getTime() > now),
+      )
+    },
+    enabled: isAuthenticated && role === 'ngo' && ngo?.verification === 'verified',
+  })
 
 	useEffect(() => {
-		loadListings()
-		if (!supabase) return undefined
+    if (isDemoBackend || !supabase) return undefined
 
 		const channel = supabase
 			.channel('ngo-live-listings')
-			.on('postgres_changes', { event: '*', schema: 'public', table: 'donations' }, loadListings)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'donations' }, () => {
+        queryClient.invalidateQueries({ queryKey: ['donations', userId, 'ngo-available'] })
+      })
 			.subscribe()
 
 		return () => supabase.removeChannel(channel)
-	}, [loadListings])
+  }, [isDemoBackend, queryClient, userId])
 
-	return { listings, loading, error, refresh: loadListings }
+  return {
+    listings: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error?.message ?? '',
+    refresh: query.refetch,
+  }
 }
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
