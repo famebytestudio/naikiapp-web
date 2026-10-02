@@ -15,6 +15,7 @@ import MyImpact from './pages/Donor/MyImpact'
 import MyListings from './pages/Donor/MyListings'
 import Landing from './pages/Landing'
 import Feed from './pages/Ngo/Feed'
+import NgoListingDetail from './pages/Ngo/ListingDetail'
 import MyClaims from './pages/Ngo/MyClaims'
 
 const queryClient = new QueryClient({
@@ -112,6 +113,14 @@ export default function App() {
               element={
                 <RequireRole roles={['ngo']} requireVerifiedNgo>
                   <Feed />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/ngo/listings/:id"
+              element={
+                <RequireRole roles={['ngo']} requireVerifiedNgo>
+                  <NgoListingDetail />
                 </RequireRole>
               }
             />

@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useAuth } from '../context/useAuth'
 import { supabase } from '../lib/supabaseClient'
-
-const demoListings = [
-	{ id: 'demo-1', food: 'Chicken biryani', type: 'Cooked', quantity: 120, unit: 'plates', kg: 42, city: 'Lahore', area: 'Gulberg III', address: 'Gulberg III, Lahore', pickupStart: '2026-09-22T20:00:00', pickupEnd: '2026-09-22T21:30:00', expiresAt: '2026-09-22T22:00:00', donor: 'Al-Noor Wedding Hall', status: 'available' },
-	{ id: 'demo-2', food: 'Fresh bread and buns', type: 'Bakery', quantity: 80, unit: 'packs', kg: 18, city: 'Lahore', area: 'Johar Town', address: 'Johar Town, Lahore', pickupStart: '2026-09-22T18:30:00', pickupEnd: '2026-09-22T19:30:00', expiresAt: '2026-09-22T20:00:00', donor: 'Anonymous', status: 'available' },
-	{ id: 'demo-3', food: 'Mixed vegetables', type: 'Fresh produce', quantity: 1, unit: 'lot', kg: 25, city: 'Islamabad', area: 'G-9 Markaz', address: 'G-9 Markaz, Islamabad', pickupStart: '2026-09-22T17:00:00', pickupEnd: '2026-09-22T18:00:00', expiresAt: '2026-09-22T18:30:00', donor: 'Chaudhry Grocers', status: 'available' },
-]
+import { listAvailable } from '../lib/listingsApi'
 
 const firstValue = (...values) => values.find((value) => value !== undefined && value !== null && value !== '')
 const asNullableNumber = (value) => {
@@ -31,20 +27,28 @@ export function normalizeListing(row) {
 		pickupEnd: firstValue(row.pickup_end, row.pickup_end_at, row.pickup_window_end, row.pickup_to),
 		expiresAt: firstValue(row.expires_at, row.expiry_at, row.expiry_time, row.expiry),
 		createdAt: firstValue(row.created_at, row.createdAt),
-		donor: row.is_anonymous ? 'Anonymous' : firstValue(row.donor_name, row.donor?.full_name, row.profile?.full_name, 'Anonymous'),
+    donor: row.is_anonymous ? 'Anonymous' : firstValue(row.donor_name, row.donor?.full_name, row.profile?.full_name, row.contact_name, 'Anonymous'),
 		status: firstValue(row.status, 'available'),
 		description: firstValue(row.description, ''),
 	}
 }
 
 export function useListings() {
-	const [listings, setListings] = useState(() => (supabase ? [] : demoListings))
-	const [loading, setLoading] = useState(Boolean(supabase))
+  const { isDemoBackend } = useAuth()
+  const [listings, setListings] = useState([])
+  const [loading, setLoading] = useState(true)
 	const [error, setError] = useState('')
 
 	const loadListings = useCallback(async () => {
-		if (!supabase) {
-			setListings(demoListings)
+    if (isDemoBackend || !supabase) {
+      try {
+        const data = await listAvailable()
+        setListings(data.map(normalizeListing))
+        setError('')
+      } catch (queryError) {
+        setListings([])
+        setError(queryError.message)
+      }
 			setLoading(false)
 			return
 		}
@@ -58,7 +62,7 @@ export function useListings() {
 			setError('')
 		}
 		setLoading(false)
-	}, [])
+  }, [isDemoBackend])
 
 	useEffect(() => {
 		loadListings()
@@ -76,7 +80,6 @@ export function useListings() {
 }
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { useAuth } from '../context/useAuth'
 import { cancel, create, getById, listMine, update } from '../lib/listingsApi'
 import { getClaimingNgo } from '../lib/ngoApi'
 import { isStillMoving } from '../utils/listingTimeline'

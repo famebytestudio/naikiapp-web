@@ -311,11 +311,102 @@ export async function listMine() {
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 }
 
+export async function listAvailable() {
+  await latency()
+  const session = requireSession()
+
+  if (session.profile?.role !== 'ngo' || session.ngo?.verification !== 'verified') {
+    throw new Error('Only verified charities can browse available listings.')
+  }
+
+  const now = Date.now()
+  return readListings()
+    .filter((listing) =>
+      listing.status === 'available' &&
+      !isRemoved(listing) &&
+      (!listing.expiry_at || new Date(listing.expiry_at).getTime() > now),
+    )
+    .sort((a, b) => new Date(a.expiry_at || 0) - new Date(b.expiry_at || 0))
+}
+
+export async function claimListing(id) {
+  await latency()
+  const session = requireSession()
+  if (session.profile?.role !== 'ngo' || session.ngo?.verification !== 'verified') {
+    throw new Error('Only verified charities can claim listings.')
+  }
+
+  const listings = readListings()
+  const index = listings.findIndex((listing) => listing.id === id)
+  if (index === -1) throw new Error('That listing no longer exists.')
+
+  const listing = listings[index]
+  if (listing.status !== 'available' || isRemoved(listing)) {
+    throw new Error('That listing is no longer available to claim.')
+  }
+  if (listing.expiry_at && new Date(listing.expiry_at).getTime() <= Date.now()) {
+    throw new Error('That listing has expired.')
+  }
+
+  const now = new Date().toISOString()
+  const next = { ...listing, status: 'claimed', claimed_by: session.ngo.id, claimed_at: now, updated_at: now }
+  listings[index] = next
+  writeListings(listings)
+  return next
+}
+
+export async function listMyClaims() {
+  await latency()
+  const session = requireSession()
+  if (session.profile?.role !== 'ngo' || session.ngo?.verification !== 'verified') {
+    throw new Error('Only verified charities can view their claims.')
+  }
+
+  return readListings()
+    .filter((listing) => listing.claimed_by === session.ngo.id)
+    .sort((a, b) => new Date(b.claimed_at || 0) - new Date(a.claimed_at || 0))
+}
+
+export async function updateClaimStatus(id, status, actualKg = null) {
+  await latency()
+  const session = requireSession()
+  if (session.profile?.role !== 'ngo' || session.ngo?.verification !== 'verified') {
+    throw new Error('Only verified charities can update claims.')
+  }
+
+  const listings = readListings()
+  const index = listings.findIndex((listing) => listing.id === id)
+  if (index === -1 || listings[index].claimed_by !== session.ngo.id) {
+    throw new Error('That listing is not claimed by your charity.')
+  }
+
+  const current = listings[index]
+  if (!((current.status === 'claimed' && status === 'picked_up') || (current.status === 'picked_up' && status === 'delivered'))) {
+    throw new Error('That status transition is not allowed.')
+  }
+
+  const now = new Date().toISOString()
+  const next = { ...current, status, updated_at: now }
+  if (status === 'picked_up') next.picked_up_at = now
+  if (status === 'delivered') {
+    const weight = Number(actualKg)
+    if (!Number.isFinite(weight) || weight < 0) throw new Error('Enter the actual kilograms delivered.')
+    next.delivered_kg = weight
+    next.delivered_at = now
+  }
+
+  listings[index] = next
+  writeListings(listings)
+  return next
+}
+
 /* Mirrors the donor, NGO, and admin SELECT policies in migration 0003. */
 function canRead(listing, session) {
   if (listing.donor_id === session.user.id) return true
   if (session.profile?.role === 'admin') return true
-  return listing.status === 'available' && session.profile?.role === 'ngo'
+  return session.profile?.role === 'ngo' && session.ngo?.verification === 'verified' && (
+    (listing.status === 'available' && !isRemoved(listing)) || listing.claimed_by === session.ngo.id
+  )
 }
 
 export async function getById(id) {

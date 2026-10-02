@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
+import { useAuth } from '../context/useAuth'
+import { listMyClaims, updateClaimStatus as updateMockClaimStatus } from '../lib/listingsApi'
 import { supabase } from '../lib/supabaseClient'
 import { normalizeListing } from './useListings'
 
@@ -9,20 +11,36 @@ const asNullableNumber = (value) => {
 	return Number.isFinite(parsed) ? parsed : null
 }
 
-const normalizeClaim = (row) => ({
-	...normalizeListing(row.donations ?? row.donation ?? {}),
+const normalizeClaim = (row) => {
+	const donation = row.donations ?? row.donation ?? row
+	return {
+	...normalizeListing(donation),
 	claimedAt: row.claimed_at,
-	status: row.donations?.status ?? row.donation?.status ?? 'claimed',
-	actualKg: asNullableNumber(firstValue(row.donations?.actual_kg, row.donations?.delivered_kg, row.donation?.actual_kg, row.donation?.delivered_kg, row.actual_kg)),
-})
+	status: donation.status ?? 'claimed',
+	actualKg: asNullableNumber(firstValue(donation.actual_kg, donation.delivered_kg, row.actual_kg)),
+	}
+}
 
 export function useClaims() {
+	const { isDemoBackend } = useAuth()
 	const [claims, setClaims] = useState([])
-	const [loading, setLoading] = useState(Boolean(supabase))
+	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState('')
 
 	const loadClaims = useCallback(async () => {
-		if (!supabase) return
+		if (isDemoBackend || !supabase) {
+			try {
+				const data = await listMyClaims()
+				setClaims(data.map(normalizeClaim))
+				setError('')
+			} catch (queryError) {
+				setClaims([])
+				setError(queryError.message)
+			}
+			setLoading(false)
+			return
+		}
+
 		const { data, error: queryError } = await supabase
 			.from('donation_claims')
 			.select('donation_id, ngo_id, claimed_at, donations (*)')
@@ -34,10 +52,19 @@ export function useClaims() {
 			setError('')
 		}
 		setLoading(false)
-	}, [])
+	}, [isDemoBackend])
 
 	const updateStatus = useCallback(async (donationId, status, actualKg = null) => {
-		if (!supabase) return { error: new Error('Live claims are unavailable until Supabase is configured.') }
+		if (isDemoBackend || !supabase) {
+			try {
+				await updateMockClaimStatus(donationId, status, actualKg)
+				await loadClaims()
+				return { error: null }
+			} catch (error) {
+				return { error }
+			}
+		}
+
 		const { error: updateError } = await supabase.rpc('update_donation_status', {
 			p_donation_id: donationId,
 			p_next_status: status,
@@ -45,11 +72,11 @@ export function useClaims() {
 		})
 		if (!updateError) await loadClaims()
 		return { error: updateError }
-	}, [loadClaims])
+	}, [isDemoBackend, loadClaims])
 
 	useEffect(() => {
 		loadClaims()
-		if (!supabase) return undefined
+		if (isDemoBackend || !supabase) return undefined
 
 		const channel = supabase
 			.channel('ngo-claims')
@@ -58,7 +85,7 @@ export function useClaims() {
 			.subscribe()
 
 		return () => supabase.removeChannel(channel)
-	}, [loadClaims])
+	}, [isDemoBackend, loadClaims])
 
 	return { claims, loading, error, refresh: loadClaims, updateStatus }
 }

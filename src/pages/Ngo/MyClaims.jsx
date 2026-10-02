@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import SignOutButton from '../../components/SignOutButton'
 import { useClaims } from '../../hooks/useClaims'
 
 const formatDate = (value) => (value ? new Intl.DateTimeFormat('en', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : 'Not recorded')
@@ -77,5 +78,53 @@ export default function MyClaims() {
     setUpdatingId('')
   }
 
-	return <main className="feed-shell"><header className="app-header"><Link to="/ngo" className="brand"><span>n</span> naiki<span className="brand-mark">/</span></Link><nav><Link to="/ngo">Live feed</Link><Link className="active" to="/ngo/claims">My claims</Link><Link to="/dashboard">Impact</Link></nav><button className="profile-button" type="button" aria-label="Open profile">R</button></header><section className="feed-heading claims-heading"><div><p className="eyebrow">NGO workspace / your activity</p><h1>My claims.</h1><p className="subtitle">Keep track of food you are collecting and the impact already delivered.</p></div><div className="claims-summary"><strong>{activeClaims.length}</strong><span>active claims</span></div></section>{error && <p className="notice error">Could not load claims: {error}</p>}{statusError && <p className="notice error" role="alert">Could not update status: {statusError}</p>}{loading ? <div className="empty-state"><div className="spinner" />Loading your claims...</div> : <div className="claims-sections"><section className="claims-section"><div className="section-heading"><h2>Active</h2><span>{activeClaims.length}</span></div>{activeClaims.length ? <div className="claims-grid">{activeClaims.map((claim) => <ClaimCard key={claim.id} claim={claim} onStatusUpdate={handleStatusUpdate} updatingId={updatingId} />)}</div> : <div className="claims-empty">No active claims yet. Browse the <Link to="/ngo">live feed</Link> to find available food.</div>}</section><section className="claims-section"><div className="section-heading"><h2>Completed</h2><span>{completedClaims.length}</span></div>{completedClaims.length ? <div className="claims-grid">{completedClaims.map((claim) => <ClaimCard key={claim.id} claim={claim} onStatusUpdate={handleStatusUpdate} updatingId={updatingId} />)}</div> : <div className="claims-empty">Completed claims will appear here after delivery or expiry.</div>}</section></div>}</main>
+  return (
+    <main className="feed-shell">
+      <header className="app-header">
+        <Link to="/ngo" className="brand"><span>n</span> naiki<span className="brand-mark">/</span></Link>
+        <nav>
+          <Link to="/ngo">Live feed</Link>
+          <Link className="active" to="/ngo/claims">My claims</Link>
+          <Link to="/dashboard">Impact</Link>
+        </nav>
+        <SignOutButton />
+      </header>
+      <section className="feed-heading claims-heading">
+        <div>
+          <p className="eyebrow">NGO workspace / your activity</p>
+          <h1>My claims.</h1>
+          <p className="subtitle">Keep track of food you are collecting and the impact already delivered.</p>
+        </div>
+        <div className="claims-summary"><strong>{activeClaims.length}</strong><span>active claims</span></div>
+      </section>
+      {error && <p className="notice error">Could not load claims: {error}</p>}
+      {statusError && <p className="notice error" role="alert">Could not update status: {statusError}</p>}
+      {loading ? (
+        <div className="empty-state"><div className="spinner" />Loading your claims...</div>
+      ) : (
+        <div className="claims-sections">
+          <section className="claims-section">
+            <div className="section-heading"><h2>Active</h2><span>{activeClaims.length}</span></div>
+            {activeClaims.length ? (
+              <div className="claims-grid">
+                {activeClaims.map((claim) => <ClaimCard key={claim.id} claim={claim} onStatusUpdate={handleStatusUpdate} updatingId={updatingId} />)}
+              </div>
+            ) : (
+              <div className="claims-empty">No active claims yet. Browse the <Link to="/ngo">live feed</Link> to find available food.</div>
+            )}
+          </section>
+          <section className="claims-section">
+            <div className="section-heading"><h2>Completed</h2><span>{completedClaims.length}</span></div>
+            {completedClaims.length ? (
+              <div className="claims-grid">
+                {completedClaims.map((claim) => <ClaimCard key={claim.id} claim={claim} onStatusUpdate={handleStatusUpdate} updatingId={updatingId} />)}
+              </div>
+            ) : (
+              <div className="claims-empty">Completed claims will appear here after delivery or expiry.</div>
+            )}
+          </section>
+        </div>
+      )}
+    </main>
+  )
 }

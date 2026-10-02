@@ -1,4 +1,5 @@
 import { NGO_VERIFICATION_META } from '../utils/roles'
+import SignOutButton from './SignOutButton'
 
 /*
   The three states every data-backed view needs. Built once here rather than
@@ -130,6 +131,7 @@ export function PendingVerificationState({ verification, organisation, reviewNot
             misrepresented pickups off the platform. Sign out and back in at any time to check on the
             status.
           </p>
+          <SignOutButton className="mt-5" />
         </Panel>
       </div>
     </div>
