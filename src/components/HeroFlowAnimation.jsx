@@ -143,10 +143,8 @@ export default function HeroFlowAnimation({ duration = LOOP_SECONDS }) {
       ambientTimelineRef.current = ambientTimeline
 
       if (preference.matches) {
-        timeline.repeat(0).pause(11.5)
+        timeline.timeScale(timeline.timeScale() * 0.5)
         ambientTimeline.pause()
-        timelineRef.current = null
-        ambientTimelineRef.current = null
       }
     }, scene)
 
@@ -372,18 +370,16 @@ export default function HeroFlowAnimation({ duration = LOOP_SECONDS }) {
         </g>
       </svg>
       <p className="landing-art-caption">Good food, shared with care.</p>
-      {!reducedMotion && (
-        <button
-          type="button"
-          className="landing-art-playback"
-          aria-label={paused ? 'Play food rescue animation' : 'Pause food rescue animation'}
-          aria-pressed={paused}
-          onClick={togglePlayback}
-        >
-          <span aria-hidden="true">{paused ? '\u25B6' : '\u2161'}</span>
-          {paused ? 'Play' : 'Pause'}
-        </button>
-      )}
+      <button
+        type="button"
+        className="landing-art-playback"
+        aria-label={paused ? 'Play food rescue animation' : 'Pause food rescue animation'}
+        aria-pressed={paused}
+        onClick={togglePlayback}
+      >
+        <span aria-hidden="true">{paused ? '\u25B6' : '\u2161'}</span>
+        {paused ? 'Play' : 'Pause'}
+      </button>
     </div>
   )
 }
