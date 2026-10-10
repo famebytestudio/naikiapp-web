@@ -39,7 +39,7 @@ export default function DonationCard({ listing, now, onCancel, isCancelling }) {
   }
 
   return (
-    <article className="flex flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-lg">
+    <article className="app-card flex flex-col rounded-3xl p-6 transition-all duration-300">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h3 className="font-display text-lg font-bold text-slate-900">{listing.title}</h3>

@@ -75,7 +75,7 @@ function LoginForm() {
       subtitle="Post surplus food, claim it as a charity, or keep the platform running."
       footer={
         <>
-          New to NaikiApp?{' '}
+          New to DastarKhan?{' '}
           <Link to="/auth/signup" className="font-bold text-emerald-700 hover:text-emerald-800">
             Create an account
           </Link>
@@ -111,37 +111,21 @@ function LoginForm() {
       </form>
 
       {isDemoBackend && (
-        <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <p className="text-xs font-bold uppercase tracking-wider text-amber-800">Demo accounts</p>
-          <p className="mt-1.5 text-xs leading-relaxed text-amber-800">
-            There is no Supabase connection yet, so accounts live in this browser. Pick one to fill the
-            form, then log in. The guards behave exactly as they will against the real backend.
-          </p>
-
-          <div className="mt-3 grid gap-2">
+        <section className="demo-account-picker" aria-label="Fill demo account credentials">
+          <p>Demo accounts <span>Fill credentials</span></p>
+          <div className="demo-account-buttons">
             {DEMO_ACCOUNTS.map((account) => (
               <button
                 key={account.email}
                 type="button"
                 onClick={() => fillDemoAccount(account)}
-                className="rounded-xl border border-amber-200 bg-white px-3 py-2 text-left transition hover:border-amber-400"
+                aria-label={`Fill ${ROLE_META[account.role]?.label ?? account.label} demo credentials`}
               >
-                <span className="flex items-center justify-between gap-2">
-                  <span className="text-xs font-bold text-slate-800">
-                    {account.label}
-                    <span className="ml-1.5 font-medium text-slate-500">{ROLE_META[account.role]?.label}</span>
-                  </span>
-                  <span className="shrink-0 text-[11px] font-semibold text-amber-700">Use</span>
-                </span>
-                <span className="mt-0.5 block text-[11px] leading-relaxed text-slate-500">{account.note}</span>
+                {ROLE_META[account.role]?.label ?? account.label}
               </button>
             ))}
           </div>
-
-          <p className="mt-3 text-[11px] text-amber-800/80">
-            Every account uses the password <span className="font-bold">{DEMO_ACCOUNTS[0].password}</span>.
-          </p>
-        </div>
+        </section>
       )}
     </AuthShell>
   )

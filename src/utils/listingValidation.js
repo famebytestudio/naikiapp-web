@@ -1,4 +1,5 @@
 import { FOOD_TYPES, QUANTITY_UNITS } from './listingStatus'
+import { DELIVERY_RADIUS_KM } from './distance'
 
 const PHONE_PATTERN = /^[0-9+\-\s()]{7,20}$/
 
@@ -15,6 +16,9 @@ export const EMPTY_LISTING = {
   city: 'Lahore',
   area: '',
   address: '',
+  pickup_latitude: null,
+  pickup_longitude: null,
+  delivery_radius_km: DELIVERY_RADIUS_KM,
   contact_name: '',
   contact_phone: '',
 }
@@ -33,11 +37,24 @@ const REQUIRED = [
   supabase/migrations/0003_create_donations.sql so the same input is rejected
   on both sides; the database remains the authority.
 */
-export function validateListing(values, now = Date.now()) {
+export function validateListing(values, now = Date.now(), { allowPastDates = false } = {}) {
   const errors = {}
 
   for (const [field, message] of REQUIRED) {
     if (!String(values[field] ?? '').trim()) errors[field] = message
+  }
+
+  const hasPickupCoordinates = values.pickup_latitude !== null
+    && values.pickup_latitude !== undefined
+    && values.pickup_latitude !== ''
+    && values.pickup_longitude !== null
+    && values.pickup_longitude !== undefined
+    && values.pickup_longitude !== ''
+  const latitude = Number(values.pickup_latitude)
+  const longitude = Number(values.pickup_longitude)
+  if (!hasPickupCoordinates || !Number.isFinite(latitude) || latitude < -90 || latitude > 90
+    || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
+    errors.pickup_location = 'Select the exact pickup point on the map.'
   }
 
   if (values.title && values.title.trim().length > 120) {
@@ -71,7 +88,7 @@ export function validateListing(values, now = Date.now()) {
 
   if (Number.isNaN(expiry)) {
     errors.expiry_at = 'When does this food expire?'
-  } else if (expiry <= now) {
+  } else if (!allowPastDates && expiry <= now) {
     errors.expiry_at = 'Expiry has to be in the future'
   }
 
@@ -79,7 +96,7 @@ export function validateListing(values, now = Date.now()) {
     errors.pickup_end_at = 'Set the full pickup window'
   } else {
     if (end <= start) errors.pickup_end_at = 'Pickup must end after it starts'
-    if (start <= now) errors.pickup_start_at = 'Pickup cannot start in the past'
+    if (!allowPastDates && start <= now) errors.pickup_start_at = 'Pickup cannot start in the past'
     // Food that expires before the NGO can collect it is not really available.
     if (!Number.isNaN(expiry) && end > expiry) {
       errors.pickup_end_at = 'Pickup must close before the food expires'

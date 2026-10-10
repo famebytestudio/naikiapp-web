@@ -1,0 +1,95 @@
+.home-refresh { background: #fff; }
+.home-refresh section[id] { scroll-margin-top: 85px; }
+.home-values { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 24px 42px; padding: 22px 24px; border-block: 1px solid #e3e9df; color: #50664e; background: #f8f9f3; font-size: 12px; font-weight: 600; }
+.home-values i { color: #d9822b; font-size: 22px; font-style: normal; }
+.home-refresh .landing-section { padding-block: 92px; }
+.home-refresh .landing-how { background: #fff; }
+.home-section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; margin-bottom: 36px; }
+.home-eyebrow { margin: 0 0 17px; color: #63745b; font-size: 10px; font-weight: 750; letter-spacing: .15em; }
+.home-section-heading h2, .home-faq h2 { margin: 0; color: #243a2d; font-family: 'Outfit', sans-serif; font-size: clamp(32px, 3.5vw, 46px); font-weight: 550; line-height: 1.1; letter-spacing: -.04em; }
+.home-section-heading h2 span, .home-faq h2 span { color: #6d8764; }
+.home-section-heading > p { max-width: 330px; margin: 0 0 2px; color: #73806e; font-size: 14px; line-height: 1.8; }
+.home-refresh .landing-steps { gap: 0; border: 1px solid #e1e6dc; border-radius: 18px; overflow: hidden; }
+.home-refresh .landing-step { padding: 28px 25px 32px; border: 0; border-right: 1px solid #e1e6dc; border-radius: 0; background: #fafbf7; }
+.home-refresh .landing-step:last-child { border-right: 0; }
+.home-refresh .landing-step:hover { transform: none; box-shadow: none; background: #f3f6ec; }
+.home-step-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 42px; color: #51704c; }
+.home-step-number { color: #9aab90; font-size: 13px; font-weight: 500; }
+.home-refresh .landing-step h3 { font-size: 20px; font-weight: 550; letter-spacing: -.025em; }
+.home-refresh .landing-step p { margin-top: 12px; color: #78816f; font-size: 13px; line-height: 1.8; }
+.home-refresh .home-join { padding-top: 10px; }
+.home-join-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.home-join-card { position: relative; overflow: hidden; border-radius: 20px; padding: 35px; }
+.home-join-donor { background: #f6ede0; }
+.home-join-charity { background: #edf2e7; }
+.home-pill { display: inline-block; border: 1px solid currentColor; border-radius: 30px; padding: 6px 11px; color: #65705a; font-size: 9px; font-weight: 650; letter-spacing: .13em; }
+.home-card-art { width: 180px; max-width: 45%; margin: 15px 0 2px auto; }
+.home-card-art svg { display: block; width: 100%; }
+.home-join-card h3 { margin: 0; color: #2a402d; font-family: 'Outfit', sans-serif; font-size: clamp(27px, 3vw, 38px); font-weight: 550; line-height: 1.13; letter-spacing: -.035em; }
+.home-join-card p { max-width: 335px; margin: 18px 0 26px; color: #6f7665; font-size: 14px; line-height: 1.8; }
+.home-join-card > a { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #cfd6c3; padding-top: 19px; color: #2d583b; font-size: 13px; font-weight: 650; }
+.home-join-card > a span { font-size: 23px; }
+.home-refresh .landing-impact { position: relative; background: #244b38; }
+.home-refresh .landing-impact-kicker { color: #bcd0af; }
+.home-refresh .landing-impact-total { color: #fffbed; font-size: clamp(70px, 9vw, 112px); font-weight: 500; }
+.home-refresh .landing-impact-total span { color: #c4d8b9; font-size: 32px; }
+.home-refresh .landing-impact-copy { max-width: 400px; color: #c4d2c1; font-size: 17px; }
+.home-refresh .landing-impact-stats { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.home-refresh .landing-impact-grid { grid-template-columns: 1fr 1.15fr; }
+.home-refresh .landing-impact-stat { align-items: flex-start; border: 0; border-left: 1px solid #52705a; border-radius: 0; padding: 15px 0 15px 20px; background: none; }
+.home-refresh .landing-impact-stat dt { min-height: 38px; color: #b9ccae; font-size: 12px; }
+.home-refresh .landing-impact-stat dd { color: #fffbed; font-size: 42px; font-weight: 500; }
+.home-community-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.home-community-grid > a { display: flex; align-items: center; gap: 22px; border: 1px solid #dfe7d8; border-radius: 16px; padding: 28px; transition: background 180ms; }
+.home-community-grid > a:hover { background: #f6f8f1; }
+.home-community-symbol { display: grid; width: 58px; height: 58px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: #eff4e8; color: #55784c; font-size: 34px; }
+.home-community-grid span { color: #7e8974; font-size: 9px; font-weight: 650; letter-spacing: .12em; }
+.home-community-grid h3 { margin: 8px 0; color: #2e4632; font-family: 'Outfit', sans-serif; font-size: 24px; font-weight: 550; }
+.home-community-grid p { margin: 0; color: #7a8372; font-size: 12px; line-height: 1.7; }
+.home-community-grid b { margin-left: auto; color: #446640; font-size: 24px; }
+.home-refresh .home-faq { padding-top: 10px; }
+.home-faq-grid { display: grid; grid-template-columns: .9fr 1.1fr; gap: 80px; }
+.home-faq-grid > div > p:last-child { margin-top: 24px; color: #77816e; font-size: 14px; line-height: 1.8; }
+.home-faq details { border-bottom: 1px solid #e0e6d9; padding: 21px 0; }
+.home-faq summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; color: #344b35; font-size: 14px; font-weight: 600; list-style: none; cursor: pointer; }
+.home-faq summary::-webkit-details-marker { display: none; }
+.home-faq summary span { color: #79936b; font-size: 24px; font-weight: 400; }
+.home-faq details[open] summary span { transform: rotate(45deg); }
+.home-faq details p { max-width: 510px; margin: 15px 0 2px; color: #73806b; font-size: 13px; line-height: 1.85; }
+.home-final-cta { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 30px; max-width: 1160px; margin: 0 auto 80px; overflow: hidden; border-radius: 22px; padding: 55px 65px; background: #edf2df; }
+.home-final-cta h2 { margin: 0; color: #2b492f; font-family: 'Outfit', sans-serif; font-size: clamp(32px, 4vw, 50px); font-weight: 550; line-height: 1.1; letter-spacing: -.04em; }
+.home-final-cta p:not(.home-eyebrow) { margin: 20px 0 25px; color: #6c7e5f; font-size: 14px; }
+.home-final-cta a { display: inline-flex; align-items: center; gap: 30px; border-radius: 8px; padding: 15px 20px; color: #fff; background: #2d6a4f; font-size: 13px; font-weight: 650; }
+.home-cta-flower { color: #d9822b; font-size: clamp(140px, 18vw, 240px); line-height: 1; }
+@media (max-width: 1000px) {
+  .home-section-heading { align-items: flex-start; flex-direction: column; gap: 18px; }
+  .home-section-heading > p { max-width: 500px; }
+  .home-refresh .landing-step:nth-child(2) { border-right: 0; }
+  .home-refresh .landing-step:nth-child(-n+2) { border-bottom: 1px solid #e1e6dc; }
+  .home-refresh .landing-impact-grid { grid-template-columns: 1fr; gap: 30px; }
+  .home-community-grid > a { gap: 15px; padding: 23px; }
+  .home-community-symbol { display: none; }
+  .home-faq-grid { gap: 40px; }
+  .home-final-cta { margin-inline: 24px; padding: 40px; }
+}
+@media (max-width: 700px) {
+  .home-refresh .landing-section { padding: 58px 18px; }
+  .home-values { gap: 12px; font-size: 10px; }
+  .home-values span:last-child, .home-values i:last-of-type { display: none; }
+  .home-join-grid, .home-community-grid, .home-faq-grid { grid-template-columns: 1fr; gap: 18px; }
+  .home-refresh .landing-steps { grid-template-columns: 1fr 1fr; margin-top: 25px; }
+  .home-refresh .landing-step { padding: 20px 17px; }
+  .home-step-top { margin-bottom: 25px; }
+  .home-refresh .landing-step h3 { font-size: 18px; }
+  .home-refresh .landing-step p { font-size: 12px; }
+  .home-join-card { padding: 27px; }
+  .home-card-art { width: 145px; }
+  .home-refresh .landing-impact-stats { gap: 10px; }
+  .home-refresh .landing-impact-stat { padding-left: 12px; }
+  .home-refresh .landing-impact-stat dd { font-size: 30px; }
+  .home-refresh .landing-impact-stat dt { font-size: 10px; }
+  .home-community-symbol { display: grid; }
+  .home-final-cta { margin: 0 18px 50px; padding: 32px 25px; }
+  .home-cta-flower { position: absolute; right: -25px; top: -30px; font-size: 120px; opacity: .16; pointer-events: none; }
+  .home-final-cta > div { position: relative; z-index: 1; }
+}

@@ -4,9 +4,12 @@ import {
   signIn as apiSignIn,
   signOut as apiSignOut,
   signUp as apiSignUp,
+  loadSupabaseSession,
+  uploadNgoIdCard,
   subscribe,
   updateProfile as apiUpdateProfile,
 } from '../lib/authApi'
+import { supabase } from '../lib/supabaseClient'
 import { AuthContext } from './useAuth'
 
 /*
@@ -14,24 +17,13 @@ import { AuthContext } from './useAuth'
   SESSION + PROVIDER
   ============================================================================
 
-  Reads the current session once on mount and then follows changes, which is the
-  same lifecycle supabase-js drives with getSession() plus onAuthStateChange().
-  The shape exposed here is the one the real client will produce - user, profile,
-  role, isAuthenticated, loading, signIn/signUp/signOut/updateProfile - so
-  swapping the mock for Supabase Auth means changing the import list and the
-  bodies of the callbacks below. No page reads the client directly, so no page
-  changes.
+  The context keeps session access centralized. When Supabase credentials are
+  configured it uses Supabase Auth and profiles; otherwise it uses local demo
+  auth.
 
   The context object and useAuth live in ./useAuth.js so this file exports only
   a component.
 
-  KNOWN GAP, carried over from migration 0001 rather than worked around here:
-  handle_new_user() creates every new auth user as a donor, and the role column
-  is unreachable from the client, so on a real database an NGO that registers
-  itself would arrive as a donor with a pending ngo_details row and no way to
-  become 'ngo' without an admin or service-role update. This mock lets an NGO
-  sign up as an NGO because that is the product flow, and the promotion path
-  needs a migration that does not exist yet. See the note in the summary.
   ============================================================================
 */
 
@@ -50,6 +42,41 @@ export function AuthProvider({ children }) {
   const [state, setState] = useState({ session: null, ready: false })
 
   useEffect(() => {
+    if (supabase) {
+      let active = true
+      let requestId = 0
+
+      async function hydrate(authSession) {
+        const currentRequest = ++requestId
+        try {
+          const session = await loadSupabaseSession(authSession)
+          if (active && currentRequest === requestId) setState({ session, ready: true })
+        } catch (error) {
+          console.error('Could not load the signed-in Supabase profile:', error)
+          if (active && currentRequest === requestId) setState({ session: null, ready: true })
+        }
+      }
+
+      supabase.auth.getSession()
+        .then(({ data, error }) => {
+          if (error) throw error
+          return hydrate(data.session)
+        })
+        .catch((error) => {
+          console.error('Could not restore the Supabase session:', error)
+          if (active) setState({ session: null, ready: true })
+        })
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, authSession) => {
+        queueMicrotask(() => hydrate(authSession))
+      })
+
+      return () => {
+        active = false
+        subscription.unsubscribe()
+      }
+    }
+
     // Covers sign-in, sign-out, the anonymity toggle, and a sign-out in another
     // tab, all from one subscription.
     return subscribe((session) => setState({ session, ready: true }))
@@ -65,7 +92,7 @@ export function AuthProvider({ children }) {
 
   const signUp = useCallback(async (fields) => {
     const next = await apiSignUp(fields)
-    setState({ session: next, ready: true })
+    if (!next.needsEmailConfirmation) setState({ session: next, ready: true })
     return next
   }, [])
 
@@ -83,6 +110,12 @@ export function AuthProvider({ children }) {
     const next = await apiUpdateProfile(patch)
     setState({ session: next, ready: true })
     return next.profile
+  }, [])
+
+  const submitNgoIdCard = useCallback(async (file, evidence) => {
+    const next = await uploadNgoIdCard(file, evidence)
+    setState({ session: next, ready: true })
+    return next.ngo
   }, [])
 
   const value = useMemo(() => {
@@ -104,11 +137,12 @@ export function AuthProvider({ children }) {
       signUp,
       signOut,
       updateProfile: saveProfile,
+      submitNgoIdCard,
       // True while auth is served by the local mock. Flips to false with the
       // Supabase swap; nothing should branch on it except demo copy.
-      isDemoBackend: true,
+      isDemoBackend: !supabase,
     }
-  }, [session, ready, signIn, signUp, signOut, saveProfile])
+  }, [session, ready, signIn, signUp, signOut, saveProfile, submitNgoIdCard])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

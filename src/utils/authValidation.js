@@ -16,6 +16,8 @@ import { isRole } from './roles'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 export const MIN_PASSWORD_LENGTH = 8
+export const MAX_ID_CARD_FILE_SIZE = 2 * 1024 * 1024
+const ID_CARD_FILE_TYPES = ['application/pdf', 'image/jpeg', 'image/png']
 
 export function validateEmail(value) {
   const email = value?.trim() ?? ''
@@ -57,6 +59,41 @@ export function validateSignUp(values) {
   const organisation = values.organisation?.trim() ?? ''
   if (values.role === 'ngo' && !organisation) {
     errors.organisation = 'Enter the name your charity registers under.'
+  }
+
+  if (values.role === 'ngo') {
+    const registrationNumber = values.registration_number?.trim() ?? ''
+    if (!registrationNumber) errors.registration_number = 'Enter your charity registration number.'
+    else if (registrationNumber.length > 100) errors.registration_number = 'Use 100 characters or fewer.'
+
+    const idCardNumber = values.id_card_number?.trim() ?? ''
+    if (!idCardNumber) errors.id_card_number = 'Enter the representative’s ID card number.'
+    else if (idCardNumber.length < 5 || idCardNumber.length > 50) {
+      errors.id_card_number = 'Use between 5 and 50 characters.'
+    }
+
+    const officialLink = values.official_link?.trim() ?? ''
+    if (!officialLink) {
+      errors.official_link = 'Enter an official registry or organisation link.'
+    } else {
+      try {
+        const url = new URL(officialLink)
+        if (!['http:', 'https:'].includes(url.protocol)) {
+          errors.official_link = 'Use a link that starts with http:// or https://.'
+        }
+      } catch {
+        errors.official_link = 'Enter a valid http:// or https:// link.'
+      }
+    }
+
+    const idCardFile = values.id_card_file
+    if (!idCardFile) {
+      errors.id_card_file = 'Upload a photo or scan of the representative’s ID card.'
+    } else if (!ID_CARD_FILE_TYPES.includes(idCardFile.type)) {
+      errors.id_card_file = 'Upload a JPG, PNG, or PDF file.'
+    } else if (!idCardFile.size || idCardFile.size > MAX_ID_CARD_FILE_SIZE) {
+      errors.id_card_file = 'The ID card file must be smaller than 2 MB.'
+    }
   }
 
   const email = validateEmail(values.email)

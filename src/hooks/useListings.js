@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
-
-const demoListings = [
-	{ id: 'demo-1', food: 'Chicken biryani', type: 'Cooked', quantity: 120, unit: 'plates', kg: 42, city: 'Lahore', area: 'Gulberg III', address: 'Gulberg III, Lahore', pickupStart: '2026-09-22T20:00:00', pickupEnd: '2026-09-22T21:30:00', expiresAt: '2026-09-22T22:00:00', donor: 'Al-Noor Wedding Hall', status: 'available' },
-	{ id: 'demo-2', food: 'Fresh bread and buns', type: 'Bakery', quantity: 80, unit: 'packs', kg: 18, city: 'Lahore', area: 'Johar Town', address: 'Johar Town, Lahore', pickupStart: '2026-09-22T18:30:00', pickupEnd: '2026-09-22T19:30:00', expiresAt: '2026-09-22T20:00:00', donor: 'Anonymous', status: 'available' },
-	{ id: 'demo-3', food: 'Mixed vegetables', type: 'Fresh produce', quantity: 1, unit: 'lot', kg: 25, city: 'Islamabad', area: 'G-9 Markaz', address: 'G-9 Markaz, Islamabad', pickupStart: '2026-09-22T17:00:00', pickupEnd: '2026-09-22T18:00:00', expiresAt: '2026-09-22T18:30:00', donor: 'Chaudhry Grocers', status: 'available' },
-]
+import { listAvailable } from '../lib/listingsApi'
+import { DELIVERY_RADIUS_KM } from '../utils/distance'
 
 const firstValue = (...values) => values.find((value) => value !== undefined && value !== null && value !== '')
 const asNullableNumber = (value) => {
@@ -27,6 +23,9 @@ export function normalizeListing(row) {
 		city: firstValue(row.city, row.location_city, 'Unknown city'),
 		area: firstValue(row.area, row.location_area, 'Nearby area'),
 		address: firstValue(row.address, row.pickup_address, `${firstValue(row.area, row.location_area, '')}, ${firstValue(row.city, row.location_city, '')}`),
+		pickup_latitude: asNullableNumber(row.pickup_latitude),
+		pickup_longitude: asNullableNumber(row.pickup_longitude),
+		delivery_radius_km: Number(firstValue(row.delivery_radius_km, DELIVERY_RADIUS_KM)),
 		pickupStart: firstValue(row.pickup_start, row.pickup_start_at, row.pickup_window_start, row.pickup_from),
 		pickupEnd: firstValue(row.pickup_end, row.pickup_end_at, row.pickup_window_end, row.pickup_to),
 		expiresAt: firstValue(row.expires_at, row.expiry_at, row.expiry_time, row.expiry),
@@ -38,13 +37,19 @@ export function normalizeListing(row) {
 }
 
 export function useListings() {
-	const [listings, setListings] = useState(() => (supabase ? [] : demoListings))
-	const [loading, setLoading] = useState(Boolean(supabase))
+	const [listings, setListings] = useState([])
+	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState('')
 
 	const loadListings = useCallback(async () => {
 		if (!supabase) {
-			setListings(demoListings)
+			try {
+				const rows = await listAvailable()
+				setListings(rows.map(normalizeListing))
+				setError('')
+			} catch (loadError) {
+				setError(loadError.message)
+			}
 			setLoading(false)
 			return
 		}
@@ -62,7 +67,10 @@ export function useListings() {
 
 	useEffect(() => {
 		loadListings()
-		if (!supabase) return undefined
+		if (!supabase) {
+			window.addEventListener('naikiapp:listings-changed', loadListings)
+			return () => window.removeEventListener('naikiapp:listings-changed', loadListings)
+		}
 
 		const channel = supabase
 			.channel('ngo-live-listings')

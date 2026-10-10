@@ -27,6 +27,8 @@ function toFormValues(listing) {
     city: listing.city,
     area: listing.area,
     address: listing.address,
+    pickup_latitude: listing.pickup_latitude,
+    pickup_longitude: listing.pickup_longitude,
     contact_name: listing.contact_name,
     contact_phone: listing.contact_phone,
   }

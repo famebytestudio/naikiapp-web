@@ -5,6 +5,8 @@ import AnonymityToggle from '../../components/AnonymityToggle'
 import DonationCard from '../../components/DonationCard'
 import Navbar from '../../components/Navbar'
 import { EmptyState, ErrorState, LoadingState } from '../../components/PageState'
+import WorkspaceMetric from '../../components/WorkspaceMetric'
+import { useAuth } from '../../context/useAuth'
 import { useCancelListing, useMyListings } from '../../hooks/useListings'
 import { formatKg } from '../../utils/formatKg'
 import { STATUS_META, STATUSES } from '../../utils/listingStatus'
@@ -12,6 +14,7 @@ import { STATUS_META, STATUSES } from '../../utils/listingStatus'
 const TABS = [{ value: 'all', label: 'All' }, ...STATUSES.map((status) => ({ value: status, label: STATUS_META[status].label }))]
 
 export default function MyListings() {
+  const { profile } = useAuth()
   const { data: listings, isLoading, isError, error, refetch } = useMyListings()
   const [filter, setFilter] = useState('all')
   const cancelListing = useCancelListing()
@@ -34,52 +37,73 @@ export default function MyListings() {
   const rescuedKg = items
     .filter((listing) => listing.status === 'delivered')
     .reduce((total, listing) => total + Number(listing.delivered_kg ?? listing.estimated_kg), 0)
+  const activeCount = items.filter((listing) => ['available', 'claimed', 'picked_up'].includes(listing.status)).length
+  const deliveredCount = counts.delivered
+  const donorName = profile?.full_name?.trim().split(/\s+/)[0]
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 workspace-page workspace-page--donor">
       <Navbar />
 
-      <main className="mx-auto max-w-5xl px-6 py-10">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="font-display text-3xl font-black tracking-tight text-slate-900">My listings</h1>
-            <p className="mt-1 text-sm text-slate-600">
-              {isLoading ? 'Loading your food…' : `${counts.all} listing${counts.all === 1 ? '' : 's'} · ${formatKg(rescuedKg)} delivered`}
-            </p>
+      <main className="workspace-main">
+        <section className="workspace-hero workspace-hero--donor">
+          <div className="workspace-hero-copy">
+            <p className="workspace-eyebrow"><span aria-hidden="true" /> DONOR WORKSPACE</p>
+            <h1>{donorName ? `Welcome back, ${donorName}.` : 'Your food, making a difference.'}</h1>
+            <p>Manage your food listings, follow each rescue, and see the impact you’ve made.</p>
           </div>
-          <Link
-            to="/donor/listings/new"
-            className="rounded-full bg-emerald-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-500 active:scale-95"
-          >
-            Post food
+          <Link to="/donor/listings/new" className="workspace-primary-action">
+            <span aria-hidden="true">+</span> Post food
           </Link>
-        </div>
+        </section>
 
-        <div className="mt-6">
+        <section className="workspace-metrics" aria-label="Donation summary">
+          <WorkspaceMetric label="Total listings" value={isLoading ? '—' : counts.all} detail="Food you have shared" />
+          <WorkspaceMetric label="In progress" value={isLoading ? '—' : activeCount} detail="Available, claimed or picked up" tone="orange" />
+          <WorkspaceMetric label="Delivered" value={isLoading ? '—' : deliveredCount} detail={`${formatKg(rescuedKg)} recorded`} tone="blue" />
+        </section>
+
+        <section className="workspace-preferences" aria-label="Donor preferences">
+          <div className="workspace-section-intro">
+            <div>
+              <p className="workspace-eyebrow">YOUR PREFERENCES</p>
+              <h2>Choose how you appear</h2>
+            </div>
+            <span>Only applies to your donor identity</span>
+          </div>
           <AnonymityToggle />
-        </div>
+        </section>
 
-        {tabs.length > 1 && (
-          <div className="mt-6 flex flex-wrap gap-2">
+        <section className="workspace-listings" aria-labelledby="donor-listings-title">
+          <div className="workspace-section-intro workspace-listings-heading">
+            <div>
+              <p className="workspace-eyebrow">DONATION ACTIVITY</p>
+              <h2 id="donor-listings-title">Your listings</h2>
+            </div>
+            <span>{isLoading ? 'Loading listings…' : `${counts.all} total`}</span>
+          </div>
+
+          {tabs.length > 1 && (
+            <div className="workspace-filter-tabs" role="group" aria-label="Filter listings by status">
             {tabs.map((tab) => (
               <button
                 key={tab.value}
                 type="button"
                 onClick={() => setFilter(tab.value)}
-                className={`rounded-full border px-4 py-2 text-xs font-bold uppercase tracking-wider transition ${
+                aria-pressed={filter === tab.value}
+                className={`workspace-filter-tab ${
                   filter === tab.value
-                    ? 'border-slate-900 bg-slate-900 text-white'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                    ? 'is-active'
+                    : ''
                 }`}
               >
                 {tab.label}
                 <span className="ml-1.5 opacity-60">{counts[tab.value]}</span>
               </button>
             ))}
-          </div>
-        )}
+            </div>
+          )}
 
-        <div className="mt-6">
           {isLoading ? (
             <LoadingState label="Loading your listings" />
           ) : isError ? (
@@ -112,7 +136,7 @@ export default function MyListings() {
               }
             />
           ) : (
-            <div className="grid gap-5">
+            <div className="workspace-donor-list">
               {visible.map((listing) => (
                 <DonationCard
                   key={listing.id}
@@ -123,10 +147,10 @@ export default function MyListings() {
               ))}
             </div>
           )}
-        </div>
+        </section>
 
         {cancelListing.isError && (
-          <p className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700" role="alert">
+          <p className="workspace-action-error" role="alert">
             {cancelListing.error.message}
           </p>
         )}

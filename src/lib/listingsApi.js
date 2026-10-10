@@ -1,5 +1,7 @@
-import { getSession, DEMO_DONOR_ID } from './authApi'
+import { getSession, DEMO_DONOR_ID, getPublicDemoProfiles } from './authApi'
 import { canCancel, canEdit } from '../utils/listingStatus'
+import { DELIVERY_RADIUS_KM, distanceKm } from '../utils/distance'
+import { supabase } from './supabaseClient'
 
 /*
   ============================================================================
@@ -87,6 +89,9 @@ function seedListings(now) {
       city: 'Lahore',
       area: 'Gulberg',
       address: 'House 42, Street 8, Gulberg III',
+      pickup_latitude: 31.5115,
+      pickup_longitude: 74.3432,
+      delivery_radius_km: DELIVERY_RADIUS_KM,
       contact_name: 'Imran Shah',
       contact_phone: '0300 1234567',
       status: 'available',
@@ -185,7 +190,33 @@ function seedListings(now) {
 
 function readListings() {
   const stored = readJson(STORAGE_KEY, null)
-  if (Array.isArray(stored)) return stored
+  if (Array.isArray(stored)) {
+    const now = Date.now()
+    const refreshedSeeds = stored.map((listing) => {
+      let next = listing
+      if (listing.delivery_radius_km === undefined) {
+        next = { ...next, delivery_radius_km: DELIVERY_RADIUS_KM }
+      }
+      if (
+        listing.id === '11111111-1111-4111-8111-111111111111'
+        && listing.pickup_latitude == null
+      ) {
+        next = { ...next, pickup_latitude: 31.5115, pickup_longitude: 74.3432 }
+      }
+      if (next.status === 'available' && new Date(next.expiry_at).getTime() <= now
+        && next.id === '11111111-1111-4111-8111-111111111111') {
+        next = {
+          ...next,
+          expiry_at: new Date(now + 2 * HOUR).toISOString(),
+          pickup_start_at: new Date(now + 15 * MINUTE).toISOString(),
+          pickup_end_at: new Date(now + 75 * MINUTE).toISOString(),
+        }
+      }
+      return next
+    })
+    if (refreshedSeeds.some((listing, index) => listing !== stored[index])) writeListings(refreshedSeeds)
+    return refreshedSeeds
+  }
   const seeded = seedListings(Date.now())
   writeJson(STORAGE_KEY, seeded)
   return seeded
@@ -193,6 +224,7 @@ function readListings() {
 
 function writeListings(listings) {
   writeJson(STORAGE_KEY, listings)
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event('naikiapp:listings-changed'))
 }
 
 function nextId() {
@@ -211,10 +243,16 @@ function nextId() {
 function requireSession() {
   const session = getSession()
   if (!session) throw new Error('You need to be logged in to do that.')
+  if (session.profile?.disabled_at) throw new Error('This account has been disabled. Contact DastarKhan support for help.')
   return session
 }
 
 export async function listMine() {
+  if (supabase) {
+    const { data, error } = await supabase.from('donations').select('*').order('created_at', { ascending: false })
+    if (error) throw error
+    return data ?? []
+  }
   await latency()
   const session = requireSession()
 
@@ -223,14 +261,240 @@ export async function listMine() {
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 }
 
+export async function listAvailable() {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('donations')
+      .select('*')
+      .eq('status', 'available')
+      .gt('expiry_at', new Date().toISOString())
+      .order('expiry_at', { ascending: true })
+    if (error) throw error
+    return data ?? []
+  }
+  await latency()
+  const session = requireSession()
+  if (session.profile?.role !== 'ngo') throw new Error('Only charity accounts can browse available donations.')
+  const now = Date.now()
+
+  return readListings()
+    .filter((listing) => listing.status === 'available' && new Date(listing.expiry_at).getTime() > now)
+    .sort((a, b) => new Date(a.expiry_at) - new Date(b.expiry_at))
+}
+
+export async function listAllForAdmin() {
+  if (supabase) {
+    const { data, error } = await supabase.from('donations').select('*').order('created_at', { ascending: false })
+    if (error) throw error
+    return data ?? []
+  }
+  await latency()
+  const session = requireSession()
+  if (session.profile?.role !== 'admin') throw new Error('Only administrators can view all donations.')
+  return readListings().sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+}
+
+export async function getDemoCommunity() {
+  await latency(80)
+  const profiles = getPublicDemoProfiles()
+  const delivered = readListings().filter(row => row.status === 'delivered')
+  const donors = profiles.filter(row => row.role === 'donor').map(profile => {
+    const rows = delivered.filter(row => row.donor_id === profile.id)
+    return { name: profile.name, deliveries: rows.length, deliveredKg: rows.reduce((sum, row) => sum + Number(row.delivered_kg ?? 0), 0) }
+  }).filter(row => row.deliveries > 0)
+    .sort((a, b) => b.deliveredKg - a.deliveredKg || b.deliveries - a.deliveries || a.name.localeCompare(b.name))
+    .slice(0, 50)
+  return {
+    ngos: profiles.filter(row => row.role === 'ngo').map(({ name }) => ({ name })).sort((a, b) => a.name.localeCompare(b.name)),
+    donors,
+  }
+}
+
+export async function getDemoImpact() {
+  await latency(80)
+  const donations = readListings()
+  const rescued = donations.filter((donation) => ['claimed', 'picked_up', 'delivered'].includes(donation.status))
+  const delivered = donations.filter((donation) => donation.status === 'delivered')
+  const byCity = Object.entries(rescued.reduce((groups, donation) => {
+    const city = donation.city || 'Unknown city'
+    groups[city] = (groups[city] ?? 0) + 1
+    return groups
+  }, {}))
+    .map(([city, value]) => ({ city, value }))
+    .sort((a, b) => b.value - a.value)
+    .slice(0, 5)
+
+  return {
+    rescues: rescued.length,
+    activeRescues: donations.filter((donation) => ['claimed', 'picked_up'].includes(donation.status)).length,
+    delivered: delivered.length,
+    deliveredKg: delivered.reduce((sum, donation) => sum + Number(donation.delivered_kg ?? 0), 0),
+    claimed: donations.filter((donation) => donation.status === 'claimed').length,
+    pickedUp: donations.filter((donation) => donation.status === 'picked_up').length,
+    byCity,
+  }
+}
+
+export async function claimDonation(id, ngoLocation) {
+  await latency()
+  const session = requireSession()
+  if (session.profile?.role !== 'ngo') throw new Error('Only charity accounts can claim donations.')
+  if (!ngoLocation) throw new Error(`Allow location access to claim a donation within the ${DELIVERY_RADIUS_KM} km delivery range.`)
+
+  const listings = readListings()
+  const listing = listings.find((row) => row.id === id)
+  if (!listing) throw new Error('That donation no longer exists.')
+  if (listing.status !== 'available' || new Date(listing.expiry_at).getTime() <= Date.now()) {
+    throw new Error('That donation is no longer available.')
+  }
+  const distance = distanceKm(
+    ngoLocation.latitude,
+    ngoLocation.longitude,
+    listing.pickup_latitude,
+    listing.pickup_longitude,
+  )
+  if (distance === null || distance > (listing.delivery_radius_km ?? DELIVERY_RADIUS_KM)) {
+    throw new Error(`This donation is outside the ${DELIVERY_RADIUS_KM} km delivery range.`)
+  }
+
+  const now = new Date().toISOString()
+  const next = { ...listing, status: 'claimed', claimed_by: session.user.id, claimed_at: now, updated_at: now }
+  listings[listings.indexOf(listing)] = next
+  writeListings(listings)
+  return next
+}
+
+export async function listMyClaims() {
+  await latency()
+  const session = requireSession()
+  if (session.profile?.role !== 'ngo') throw new Error('Only charity accounts can view claims.')
+  return readListings()
+    .filter((listing) => listing.claimed_by === session.user.id)
+    .sort((a, b) => new Date(b.claimed_at ?? b.created_at) - new Date(a.claimed_at ?? a.created_at))
+}
+
+export async function updateClaimStatus(id, nextStatus, actualKg = null) {
+  await latency()
+  const session = requireSession()
+  if (session.profile?.role !== 'ngo') throw new Error('Only charity accounts can update claims.')
+
+  const listings = readListings()
+  const index = listings.findIndex((listing) => listing.id === id)
+  if (index < 0 || listings[index].claimed_by !== session.user.id) throw new Error('That claim does not belong to your charity.')
+  const current = listings[index]
+
+  if ((current.status === 'claimed' && nextStatus !== 'picked_up') || (current.status === 'picked_up' && nextStatus !== 'delivered')) {
+    throw new Error('Claim status must advance from claimed to picked up to delivered.')
+  }
+  if (nextStatus === 'delivered' && (!Number.isFinite(Number(actualKg)) || Number(actualKg) < 0)) {
+    throw new Error('Enter the actual kilograms delivered.')
+  }
+
+  const now = new Date().toISOString()
+  const next = {
+    ...current,
+    status: nextStatus,
+    picked_up_at: nextStatus === 'picked_up' ? now : current.picked_up_at,
+    delivered_at: nextStatus === 'delivered' ? now : current.delivered_at,
+    delivered_kg: nextStatus === 'delivered' ? Number(actualKg) : current.delivered_kg,
+    updated_at: now,
+  }
+  listings[index] = next
+  writeListings(listings)
+  return next
+}
+
+export async function cancelByAdmin(id) {
+  await latency()
+  const session = requireSession()
+  if (session.profile?.role !== 'admin') throw new Error('Only administrators can moderate donations.')
+
+  const listings = readListings()
+  const index = listings.findIndex((listing) => listing.id === id)
+  if (index < 0) throw new Error('That donation no longer exists.')
+  const listing = listings[index]
+  if (!['available', 'claimed'].includes(listing.status)) {
+    throw new Error('Only available or claimed donations can be removed.')
+  }
+
+  const now = new Date().toISOString()
+  listings[index] = { ...listing, status: 'cancelled', cancelled_at: now, updated_at: now }
+  writeListings(listings)
+  return listings[index]
+}
+
+function requireAdmin() {
+  const session = requireSession()
+  if (session.profile?.role !== 'admin') throw new Error('Only administrators can manage donations.')
+  return session
+}
+
+export async function createByAdmin(values) {
+  await latency()
+  const session = requireAdmin()
+  const now = new Date().toISOString()
+  const donation = {
+    ...values,
+    id: nextId(),
+    donor_id: session.user.id,
+    status: 'available',
+    claimed_by: null,
+    claimed_at: null,
+    picked_up_at: null,
+    delivered_at: null,
+    delivered_kg: null,
+    cancelled_at: null,
+    created_at: now,
+    updated_at: now,
+  }
+
+  writeListings([donation, ...readListings()])
+  return donation
+}
+
+export async function updateByAdmin(id, values) {
+  await latency()
+  requireAdmin()
+
+  const listings = readListings()
+  const index = listings.findIndex((listing) => listing.id === id)
+  if (index < 0) throw new Error('That donation no longer exists.')
+
+  const current = listings[index]
+  const next = {
+    ...current,
+    ...values,
+    id: current.id,
+    donor_id: current.donor_id,
+    status: current.status,
+    claimed_by: current.claimed_by,
+    claimed_at: current.claimed_at,
+    picked_up_at: current.picked_up_at,
+    delivered_at: current.delivered_at,
+    delivered_kg: current.delivered_kg,
+    cancelled_at: current.cancelled_at,
+    updated_at: new Date().toISOString(),
+  }
+
+  listings[index] = next
+  writeListings(listings)
+  return next
+}
+
 /* Mirrors the donor, NGO, and admin SELECT policies in migration 0003. */
 function canRead(listing, session) {
   if (listing.donor_id === session.user.id) return true
   if (session.profile?.role === 'admin') return true
+  if (session.profile?.role === 'ngo' && listing.claimed_by === session.user.id) return true
   return listing.status === 'available' && session.profile?.role === 'ngo'
 }
 
 export async function getById(id) {
+  if (supabase) {
+    const { data, error } = await supabase.from('donations').select('*').eq('id', id).maybeSingle()
+    if (error) throw error
+    return data
+  }
   await latency(80)
   const session = requireSession()
 
@@ -249,6 +513,19 @@ export async function getById(id) {
   here to match what the UI offers: one posting form, on the donor portal.
 */
 export async function create(values) {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('donations')
+      .insert({
+        ...values,
+        delivery_radius_km: DELIVERY_RADIUS_KM,
+        status: 'available',
+      })
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  }
   await latency()
   const session = requireSession()
 
@@ -300,6 +577,17 @@ function findWritable(listings, id) {
   the edit, so the page can surface the conflict instead of pretending to save.
 */
 export async function update(id, values) {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('donations')
+      .update(values)
+      .eq('id', id)
+      .select()
+      .maybeSingle()
+    if (error) throw error
+    if (!data) throw new Error('This listing no longer exists or is no longer editable.')
+    return data
+  }
   await latency()
   const listings = readListings()
   const index = findWritable(listings, id)
@@ -325,6 +613,17 @@ export async function update(id, values) {
 
 /* Mirrors donations_cancel_own: available or claimed, never once picked up. */
 export async function cancel(id) {
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('donations')
+      .update({ status: 'cancelled', cancelled_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .maybeSingle()
+    if (error) throw error
+    if (!data) throw new Error('This listing is no longer eligible for cancellation.')
+    return data
+  }
   await latency()
   const listings = readListings()
   const index = findWritable(listings, id)

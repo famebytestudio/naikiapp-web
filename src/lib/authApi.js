@@ -27,17 +27,21 @@
      only, so `role` is unreachable from the client entirely. updateProfile()
      here filters to the same four columns, and signUp() rejects 'admin'.
 
-    2. NGO access is based on the account role, not an approval status. The
-      verification field remains only as legacy data for existing accounts.
+  2. NGO access requires an administrator-approved registration in addition to
+     the NGO role. New registrations are always pending until reviewed.
 
   SECURITY: none of this is security. Accounts and a non-cryptographic password
   digest live in localStorage, readable and editable by anyone at the devtools
   console. That is acceptable for a demo and is categorically not acceptable in
-  production - which is exactly why the whole thing lives behind this one module.
+  production. NGO document uploads in this demo are also stored there as data
+  URLs; never use real identity documents until the private Supabase Storage flow
+  is connected.
   ============================================================================
 */
 
 import { isRole } from '../utils/roles'
+import { validateSignUp } from '../utils/authValidation'
+import { supabase } from './supabaseClient'
 
 const ACCOUNTS_KEY = 'naikiapp:mock:accounts:v1'
 const SESSION_KEY = 'naikiapp:mock:session:v1'
@@ -104,14 +108,27 @@ function profile(overrides) {
   return { id: overrides.id, full_name: null, organisation: null, phone: null, role: 'donor', is_anonymous: false, created_at: now, updated_at: now, ...overrides }
 }
 
-function ngoRecord({ profileId, organisation, registrationNumber, verification, verifiedBy = null, id }) {
+function ngoRecord({
+  profileId,
+  organisation,
+  registrationNumber,
+  verification,
+  verifiedBy = null,
+  idCardNumber = null,
+  idCardDocument = null,
+  officialLink = null,
+  id,
+}) {
   const now = new Date().toISOString()
   return {
     id: id ?? nextId(),
     profile_id: profileId,
     organisation,
     registration_number: registrationNumber,
-    verification,
+    id_card_number: idCardNumber,
+    id_card_document: idCardDocument,
+    official_link: officialLink,
+    verification_status: verification,
     verified_by: verifiedBy,
     // Only a decided application gets a decision timestamp.
     verified_at: verification === 'pending' ? null : now,
@@ -203,8 +220,8 @@ function seedAccounts() {
       password: DEMO_PASSWORD,
       profile: profile({
         id: adminId,
-        full_name: 'NaikiApp Operations',
-        organisation: 'NaikiApp',
+        full_name: 'DastarKhan Operations',
+        organisation: 'DastarKhan',
         phone: '0423 555 0100',
         role: 'admin',
         created_at: stamp,
@@ -229,13 +246,6 @@ export const DEMO_ACCOUNTS = [
   },
   {
     email: 'ngo@naikiapp.pk',
-    password: DEMO_PASSWORD,
-    role: 'ngo',
-    label: 'NGO',
-    note: 'Can browse and claim available food',
-  },
-  {
-    email: 'pending@naikiapp.pk',
     password: DEMO_PASSWORD,
     role: 'ngo',
     label: 'NGO',
@@ -301,7 +311,257 @@ export function getSession() {
     return null
   }
 
+  if (match.profile?.disabled_at) {
+    writeJson(SESSION_KEY, null)
+    return null
+  }
+
   return toSession(match)
+}
+
+export async function loadSupabaseSession(authSession) {
+  if (!authSession?.user) return null
+
+  const { data: profileRow, error: profileError } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', authSession.user.id)
+    .single()
+  if (profileError) throw profileError
+
+  let ngo = null
+  if (profileRow.role === 'ngo') {
+    const { data, error } = await supabase
+      .from('ngo_details')
+      .select('*')
+      .eq('profile_id', authSession.user.id)
+      .maybeSingle()
+    if (error) throw error
+    ngo = data
+  }
+
+  return {
+    user: { id: authSession.user.id, email: authSession.user.email },
+    profile: profileRow,
+    ngo,
+  }
+}
+
+function idCardExtension(file) {
+  const extensionByType = {
+    'application/pdf': 'pdf',
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+  }
+  const extension = extensionByType[file?.type]
+  if (!extension) throw new Error('Upload a JPG, PNG, or PDF ID card.')
+  if (!file.size || file.size > 2 * 1024 * 1024) throw new Error('The ID card file must be smaller than 2 MB.')
+  return extension
+}
+
+export async function uploadNgoIdCard(file, evidence = {}) {
+  if (!supabase) {
+    idCardExtension(file)
+    const session = getSession()
+    if (session?.profile?.role !== 'ngo') throw new Error('Sign in as an NGO before submitting registration evidence.')
+    const registrationNumber = String(evidence.registration_number ?? '').trim()
+    const idCardNumber = String(evidence.id_card_number ?? '').trim()
+    const officialLink = String(evidence.official_link ?? '').trim()
+    try {
+      const url = new URL(officialLink)
+      if (!['http:', 'https:'].includes(url.protocol)) throw new Error()
+    } catch {
+      throw new Error('Enter a valid official link starting with http:// or https://.')
+    }
+    if (!registrationNumber || idCardNumber.length < 5 || idCardNumber.length > 50) {
+      throw new Error('Enter the charity registration number and a valid representative ID number.')
+    }
+    const encodedDocument = await readFileAsDataUrl(file)
+    const accounts = readAccounts()
+    const email = Object.keys(accounts).find((key) => accounts[key].id === session.user.id)
+    if (!email || accounts[email].profile?.role !== 'ngo' || !accounts[email].ngo) {
+      throw new Error('That charity registration no longer exists.')
+    }
+    if (accounts[email].ngo.verification_status === 'verified') {
+      throw new Error('The verified charity registration cannot be changed here.')
+    }
+    accounts[email].ngo = {
+      ...accounts[email].ngo,
+      registration_number: registrationNumber,
+      id_card_number: idCardNumber,
+      id_card_document: encodedDocument,
+      official_link: officialLink,
+      verification_status: 'pending',
+      needs_info: false,
+      review_note: null,
+      updated_at: new Date().toISOString(),
+    }
+    writeAccounts(accounts)
+    const saved = findAccount(email)
+    if (saved?.ngo?.id_card_document !== encodedDocument) {
+      throw new Error('Could not save the ID card in this browser. Try a smaller file or clear storage.')
+    }
+    const updatedSession = toSession(saved)
+    emit(updatedSession)
+    return updatedSession
+  }
+
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+  if (sessionError) throw sessionError
+  if (!session) throw new Error('Sign in before uploading your ID card.')
+
+  const { data: currentNgo, error: ngoError } = await supabase
+    .from('ngo_details')
+    .select('id_card_document_path')
+    .eq('profile_id', session.user.id)
+    .maybeSingle()
+  if (ngoError) throw ngoError
+  if (!currentNgo) throw new Error('No NGO registration was found for this account.')
+
+  const extension = idCardExtension(file)
+  const fileId = globalThis.crypto?.randomUUID?.() ?? nextId()
+  const path = `${session.user.id}/${fileId}.${extension}`
+  const { error: uploadError } = await supabase.storage
+    .from('ngo-id-cards')
+    .upload(path, file, { contentType: file.type, upsert: false })
+  if (uploadError) throw uploadError
+
+  const { error: submitError } = await supabase.rpc('submit_ngo_registration_evidence', {
+    p_id_card_document_path: path,
+    p_registration_number: evidence.registration_number ?? null,
+    p_id_card_number: evidence.id_card_number ?? null,
+    p_official_link: evidence.official_link ?? null,
+  })
+  if (submitError) {
+    const { error: cleanupError } = await supabase.storage.from('ngo-id-cards').remove([path])
+    if (cleanupError) console.error('Could not clean up an unlinked NGO ID document:', cleanupError.message)
+    throw submitError
+  }
+
+  if (currentNgo.id_card_document_path && currentNgo.id_card_document_path !== path) {
+    const { error: removeError } = await supabase.storage
+      .from('ngo-id-cards')
+      .remove([currentNgo.id_card_document_path])
+    if (removeError) {
+      throw new Error(`Evidence was submitted, but the replaced private document could not be deleted: ${removeError.message}`)
+    }
+  }
+
+  return loadSupabaseSession(session)
+}
+
+// Public demo projection: never return credentials or private contact fields.
+export function getPublicDemoProfiles() {
+  return Object.values(readAccounts())
+    .filter(({ profile }) => !profile.disabled_at && (profile.role === 'ngo' || (profile.role === 'donor' && !profile.is_anonymous)))
+    .map(({ id, profile, ngo }) => ({
+      id,
+      role: profile.role,
+      name: (ngo?.organisation || profile.organisation || (profile.role === 'donor' ? profile.full_name : '') || (profile.role === 'ngo' ? 'Community charity' : 'Community donor')).trim(),
+    }))
+}
+
+export async function listRegisteredNgosForAdmin() {
+  await latency()
+  const session = getSession()
+  if (session?.profile?.role !== 'admin') {
+    throw new Error('Only administrators can view registered charities.')
+  }
+
+  return Object.values(readAccounts())
+    .filter((entry) => entry.profile?.role === 'ngo')
+    .map((entry) => ({
+      id: entry.id,
+      email: entry.email,
+      fullName: entry.profile.full_name ?? '',
+      organisation: entry.ngo?.organisation ?? entry.profile.organisation ?? '',
+      phone: entry.profile.phone ?? '',
+      registrationNumber: entry.ngo?.registration_number ?? null,
+      idCardNumber: entry.ngo?.id_card_number ?? null,
+      idCardDocument: entry.ngo?.id_card_document ?? null,
+      officialLink: entry.ngo?.official_link ?? null,
+      verificationStatus: entry.ngo?.verification_status ?? 'pending',
+      needsInfo: Boolean(entry.ngo?.needs_info),
+      reviewNote: entry.ngo?.review_note ?? null,
+      registeredAt: entry.ngo?.created_at ?? entry.profile.created_at,
+      disabledAt: entry.profile.disabled_at ?? null,
+      disabledReason: entry.profile.disabled_reason ?? null,
+    }))
+    .sort((a, b) => new Date(b.registeredAt ?? 0) - new Date(a.registeredAt ?? 0))
+}
+
+export async function setNgoVerificationByAdmin(id, decision, note = '') {
+  await latency()
+  const session = getSession()
+  if (session?.profile?.role !== 'admin' || session.profile?.disabled_at) {
+    throw new Error('Only active administrators can review charity registrations.')
+  }
+  if (!['approve', 'reject', 'request_info'].includes(decision)) {
+    throw new Error('Choose approve, reject, or request more information.')
+  }
+
+  const accounts = readAccounts()
+  const entry = Object.values(accounts).find((accountEntry) => accountEntry.id === id)
+  if (!entry || entry.profile?.role !== 'ngo' || !entry.ngo) {
+    throw new Error('That charity registration no longer exists.')
+  }
+  if (decision !== 'approve' && !String(note).trim()) {
+    throw new Error('Add a review note when rejecting or requesting information.')
+  }
+  if (
+    decision === 'approve'
+    && (
+      !entry.ngo.registration_number?.trim()
+      || !entry.ngo.id_card_number?.trim()
+      || !entry.ngo.id_card_document
+      || !entry.ngo.official_link?.trim()
+    )
+  ) {
+    throw new Error('Complete registration, ID card, and official link evidence before approval.')
+  }
+
+  const timestamp = new Date().toISOString()
+  entry.ngo = {
+    ...entry.ngo,
+    verification_status: decision === 'approve' ? 'verified' : decision === 'reject' ? 'rejected' : 'pending',
+    needs_info: decision === 'request_info',
+    review_note: String(note).trim() || null,
+    verified_by: decision === 'approve' ? session.user.id : null,
+    verified_at: decision === 'approve' ? timestamp : null,
+    updated_at: timestamp,
+  }
+  writeAccounts(accounts)
+  emit(getSession())
+  return { id: entry.id, verificationStatus: entry.ngo.verification_status }
+}
+
+export async function setNgoDisabledByAdmin(id, disabled, reason = '') {
+  await latency()
+  const session = getSession()
+  if (session?.profile?.role !== 'admin' || session.profile?.disabled_at) {
+    throw new Error('Only active administrators can manage charity accounts.')
+  }
+  if (typeof disabled !== 'boolean') throw new Error('Choose whether to disable or enable this charity.')
+
+  const accounts = readAccounts()
+  const entry = Object.values(accounts).find((accountEntry) => accountEntry.id === id)
+  if (!entry || entry.profile?.role !== 'ngo') throw new Error('That charity account no longer exists.')
+
+  const timestamp = new Date().toISOString()
+  entry.profile = {
+    ...entry.profile,
+    disabled_at: disabled ? timestamp : null,
+    disabled_by: disabled ? session.user.id : null,
+    disabled_reason: disabled ? String(reason).trim().slice(0, 500) : null,
+    updated_at: timestamp,
+  }
+  writeAccounts(accounts)
+  emit(getSession())
+  return {
+    id: entry.id,
+    disabledAt: entry.profile.disabled_at,
+    disabledReason: entry.profile.disabled_reason,
+  }
 }
 
 const listeners = new Set()
@@ -346,6 +606,15 @@ export function subscribe(listener) {
 /* ------------------------------------------------------------------ write */
 
 export async function signIn({ email, password }) {
+  if (supabase) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: String(email ?? '').trim().toLowerCase(),
+      password,
+    })
+    if (error) throw error
+    return loadSupabaseSession(data.session)
+  }
+
   await latency()
   const accountEntry = findAccount(email)
 
@@ -357,6 +626,9 @@ export async function signIn({ email, password }) {
   if (!accountEntry || accountEntry.passwordDigest !== digestPassword(password)) {
     throw new Error('That email and password do not match an account.')
   }
+  if (accountEntry.profile?.disabled_at) {
+    throw new Error('This charity account has been disabled. Contact DastarKhan support for help.')
+  }
 
   writeJson(SESSION_KEY, accountEntry.id)
   const session = toSession(accountEntry)
@@ -364,11 +636,34 @@ export async function signIn({ email, password }) {
   return session
 }
 
-export async function signUp({ email, password, full_name, organisation, phone, role, registration_number }) {
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      if (typeof reader.result === 'string') resolve(reader.result)
+      else reject(new Error('Could not read the ID card file. Please choose it again.'))
+    }
+    reader.onerror = () => reject(new Error('Could not read the ID card file. Please choose it again.'))
+    reader.readAsDataURL(file)
+  })
+}
+
+export async function signUp({
+  email,
+  password,
+  full_name,
+  organisation,
+  phone,
+  role,
+  registration_number,
+  id_card_number,
+  id_card_file,
+  official_link,
+}) {
   await latency()
   const normalisedEmail = String(email ?? '').trim().toLowerCase()
 
-  if (findAccount(normalisedEmail)) {
+  if (!supabase && findAccount(normalisedEmail)) {
     throw new Error('An account already exists for that email address. Try logging in instead.')
   }
 
@@ -378,6 +673,62 @@ export async function signUp({ email, password, full_name, organisation, phone, 
     throw new Error('That account type cannot be created from sign-up.')
   }
 
+  const validationErrors = validateSignUp({
+    email,
+    password,
+    full_name,
+    organisation,
+    phone,
+    role,
+    registration_number,
+    id_card_number,
+    id_card_file,
+    official_link,
+    confirmPassword: password,
+  })
+  if (Object.keys(validationErrors).length) {
+    throw new Error(Object.values(validationErrors)[0])
+  }
+
+  if (supabase) {
+    const { data, error } = await supabase.auth.signUp({
+      email: normalisedEmail,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/login`,
+        data: {
+          full_name: full_name.trim(),
+          organisation: organisation?.trim() || '',
+          phone: phone?.trim() || '',
+          role,
+          registration_number: registration_number?.trim() || '',
+          id_card_number: id_card_number?.trim() || '',
+          official_link: official_link?.trim() || '',
+        },
+      },
+    })
+    if (error) throw error
+
+    if (!data.session) {
+      return {
+        needsEmailConfirmation: true,
+        user: { id: data.user.id, email: data.user.email },
+        profile: { role },
+        ngo: null,
+      }
+    }
+
+    if (role === 'ngo') {
+      await uploadNgoIdCard(id_card_file, {
+        registration_number,
+        id_card_number,
+        official_link,
+      })
+    }
+    return loadSupabaseSession(data.session)
+  }
+
+  const idCardDocument = role === 'ngo' ? await readFileAsDataUrl(id_card_file) : null
   const id = nextId()
   const profileRow = profile({
     id,
@@ -403,7 +754,10 @@ export async function signUp({ email, password, full_name, organisation, phone, 
             profileId: id,
             organisation: profileRow.organisation,
             registrationNumber: registration_number?.trim() || null,
-            verification: 'verified',
+            idCardNumber: id_card_number?.trim() || null,
+            idCardDocument,
+            officialLink: official_link?.trim() || null,
+            verification: 'pending',
           })
         : null,
   })
@@ -411,6 +765,9 @@ export async function signUp({ email, password, full_name, organisation, phone, 
   const accounts = readAccounts()
   accounts[normalisedEmail] = accountEntry
   writeAccounts(accounts)
+  if (role === 'ngo' && findAccount(normalisedEmail)?.ngo?.id_card_document !== idCardDocument) {
+    throw new Error('Could not securely save the ID card in this browser. Please try a smaller file.')
+  }
   writeJson(SESSION_KEY, accountEntry.id)
 
   const session = toSession(accountEntry)
@@ -419,6 +776,12 @@ export async function signUp({ email, password, full_name, organisation, phone, 
 }
 
 export async function signOut() {
+  if (supabase) {
+    const { error } = await supabase.auth.signOut()
+    if (error) throw error
+    return
+  }
+
   await latency(80)
   writeJson(SESSION_KEY, null)
   emit(null)
@@ -432,6 +795,19 @@ export async function signOut() {
 const PROFILE_WRITE_COLUMNS = ['full_name', 'organisation', 'phone', 'is_anonymous']
 
 export async function updateProfile(patch) {
+  if (supabase) {
+    const allowedPatch = {}
+    for (const column of PROFILE_WRITE_COLUMNS) {
+      if (column in patch) allowedPatch[column] = patch[column]
+    }
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) throw sessionError
+    if (!session) throw new Error('You need to be logged in to change your profile.')
+    const { error } = await supabase.from('profiles').update(allowedPatch).eq('id', session.user.id)
+    if (error) throw error
+    return loadSupabaseSession(session)
+  }
+
   await latency(120)
   const session = getSession()
   if (!session) throw new Error('You need to be logged in to change your profile.')

@@ -4,9 +4,12 @@
   different spinners.
 */
 
+import Logo from './Logo'
+
 function Panel({ children, className = '' }) {
   return (
     <div className={`rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm ${className}`}>
+      <Logo size="small" className="mb-6 justify-center" />
       {children}
     </div>
   )
@@ -72,9 +75,9 @@ export function EmptyState({ title, description, action }) {
 export function FullPageLoader({ label = 'Checking your session' }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50" role="status" aria-live="polite">
-      <div className="h-9 w-9 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-600" />
+      <Logo size="medium" className="mb-3" />
+      <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-emerald-200 border-t-emerald-600" />
       <p className="text-sm font-semibold text-slate-500">{label}</p>
     </div>
   )
 }
-

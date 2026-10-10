@@ -1,28 +1,40 @@
-import { Link } from 'react-router-dom'
+import Navbar from './Navbar'
+import AuthRescueAnimation from './AuthRescueAnimation'
 
-/*
-  The frame both auth screens share: the wordmark, a heading, the form, and a
-  link across to the other screen. Two screens with the same chrome is exactly
-  the case where inlining it twice guarantees they drift apart.
-*/
 export default function AuthShell({ title, subtitle, children, footer }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-6 py-12">
-      <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/50">
-        <Link to="/" className="inline-flex items-center gap-2 font-display text-2xl font-black text-slate-900">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-white">
-            N
-          </span>
-          NaikiApp
-        </Link>
+    <div className="auth-page">
+      <Navbar />
 
-        <h1 className="mt-8 font-display text-2xl font-bold text-slate-900">{title}</h1>
-        {subtitle && <p className="mt-2 text-sm text-slate-600">{subtitle}</p>}
+      <main className="auth-main">
+        <section className="auth-story" aria-labelledby="auth-story-title">
+          <div className="auth-story-copy">
+            <span className="auth-eyebrow"><span aria-hidden="true" /> Food rescue, made practical</span>
+            <h2 id="auth-story-title">Good food can do more.</h2>
+            <p>Bring surplus food and local charities together through one simple, thoughtful flow.</p>
+          </div>
 
-        <div className="mt-8">{children}</div>
+          <AuthRescueAnimation />
 
-        {footer && <div className="mt-8 border-t border-slate-100 pt-6 text-center text-sm text-slate-600">{footer}</div>}
-      </div>
+          <div className="auth-story-points">
+            <span><b>01</b> Share surplus food</span>
+            <span><b>02</b> Connect with a charity</span>
+            <span><b>03</b> Follow each rescue</span>
+          </div>
+        </section>
+
+        <section className="auth-panel" aria-labelledby="auth-title">
+          <div className="auth-card">
+            <span className="auth-panel-kicker">Welcome to DastarKhan</span>
+            <h1 id="auth-title" className="auth-title">{title}</h1>
+            {subtitle && <p className="auth-subtitle">{subtitle}</p>}
+
+            <div className="auth-form-content">{children}</div>
+
+            {footer && <div className="auth-card-footer">{footer}</div>}
+          </div>
+        </section>
+      </main>
     </div>
   )
 }

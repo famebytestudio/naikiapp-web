@@ -1,16 +1,17 @@
-import { Link } from 'react-router-dom'
-import SignOutButton from '../../components/SignOutButton'
+import Navbar from '../../components/Navbar'
+import { useAuth } from '../../context/useAuth'
 import { useImpact } from '../../hooks/useImpact'
 
 const formatKg = (value) => `${value.toFixed(1).replace(/\.0$/, '')} kg`
 
 export default function ImpactDashboard() {
 	const { stats, loading, error } = useImpact()
+	const { role } = useAuth()
 
 	const cards = [
-		{ label: 'Meals rescued', value: stats.rescues, note: 'claims and deliveries recorded' },
+		{ label: 'Rescues recorded', value: stats.rescues, note: 'claimed, collected, or delivered' },
 		{ label: 'Active rescues', value: stats.activeRescues, note: 'currently claimed or in transit' },
-		{ label: 'Delivered', value: stats.delivered, note: 'completed drop-offs' },
+		{ label: 'Deliveries logged', value: stats.delivered, note: 'completed drop-offs' },
 		{ label: 'Kg delivered', value: formatKg(stats.deliveredKg), note: 'actual kilograms logged' },
 	]
 
@@ -21,22 +22,15 @@ export default function ImpactDashboard() {
 	]
 
 	return (
-		<main className="feed-shell dashboard-shell">
-			<header className="app-header">
-				<Link to="/ngo" className="brand"><span>n</span> naiki<span className="brand-mark">/</span></Link>
-				<nav>
-					<Link to="/ngo">Live feed</Link>
-					<Link to="/ngo/claims">My claims</Link>
-					<Link className="active" to="/dashboard">Impact</Link>
-				</nav>
-				<SignOutButton />
-			</header>
+	<>
+	<Navbar />
+	<main className="feed-shell dashboard-shell">
 
 			<section className="feed-heading dashboard-heading">
 				<div>
 					<p className="eyebrow">NGO network / impact</p>
-					<h1>Platform-wide rescue impact.</h1>
-					<p className="subtitle">See how much surplus food is being rescued, picked up, and delivered across the network.</p>
+					<h1>{role === 'donor' ? 'Your rescue impact.' : 'Rescue impact.'}</h1>
+					<p className="subtitle">A live summary of donation records visible to your account.</p>
 				</div>
 				<div className="impact-summary">
 					<strong>{stats.deliveredKg.toFixed(1).replace(/\.0$/, '')}</strong>
@@ -92,5 +86,6 @@ export default function ImpactDashboard() {
 				</div>
 			)}
 		</main>
+		</>
 	)
 }

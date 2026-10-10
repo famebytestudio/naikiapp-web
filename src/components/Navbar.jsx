@@ -1,8 +1,12 @@
-import { NavLink, Link } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, NavLink } from 'react-router-dom'
 
 import { useAuth } from '../context/useAuth'
 import { homeForRole, ROLE_META } from '../utils/roles'
 import SignOutButton from './SignOutButton'
+import Logo from './Logo'
+import PublicHeader from './PublicHeader'
+import NotificationsMenu from './NotificationsMenu'
 
 /*
   One navbar for three products' worth of screens, so the links are keyed off the
@@ -17,23 +21,22 @@ const NAV_BY_ROLE = {
   donor: [
     ['/donor/listings', 'My listings'],
     ['/donor/listings/new', 'Post food'],
+    ['/dashboard', 'Impact'],
   ],
   ngo: [
     ['/ngo/feed', 'Available food'],
     ['/ngo/claims', 'My claims'],
+    ['/dashboard', 'Impact'],
   ],
   admin: [
     ['/admin/listings', 'All listings'],
+    ['/admin/ngos', 'Registered NGOs'],
   ],
 }
 
 export default function Navbar() {
   const { profile, role, isAuthenticated, isAnonymous } = useAuth()
-
-  const linkClass = ({ isActive }) =>
-    `rounded-full px-4 py-2 text-sm font-bold transition-colors ${
-      isActive ? 'bg-emerald-100 text-emerald-800' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-    }`
+  const [menuOpen, setMenuOpen] = useState(false)
 
   /*
     How the account introduces itself. An anonymous donor is "Anonymous Donor"
@@ -48,28 +51,33 @@ export default function Navbar() {
   }
 
   const { name, detail } = identity()
+  if (!isAuthenticated) return <PublicHeader />
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/80 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-4 px-6 py-4">
-        <Link to={isAuthenticated ? homeForRole(role) : '/'} className="flex items-center gap-2 font-display text-xl font-black text-slate-900">
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-sm text-white">
-            N
-          </span>
-          NaikiApp
-        </Link>
+    <header className="app-navbar">
+      <div className="app-navbar-inner">
+        <Logo to={isAuthenticated ? homeForRole(role) : '/'} />
+
+        {!isAuthenticated && (
+          <nav className="auth-public-nav" aria-label="Main navigation">
+            <Link to="/#how" className="app-nav-link">How it works</Link>
+            <Link to="/#impact" className="app-nav-link">Our impact</Link>
+            <Link to="/ngo/feed" className="app-nav-link">Browse food</Link>
+          </nav>
+        )}
 
         {isAuthenticated ? (
           <>
-            <nav className="flex items-center gap-1">
+            <nav className="desktop-nav">
               {(NAV_BY_ROLE[role] ?? []).map(([to, label]) => (
-                <NavLink key={to} to={to} className={linkClass} end={to === '/donor/listings'}>
+                <NavLink key={to} to={to} className={({ isActive }) => `app-nav-link ${isActive ? 'active' : ''}`} end={to === '/donor/listings'}>
                   {label}
                 </NavLink>
               ))}
             </nav>
 
-            <div className="flex items-center gap-3">
+            <div className="navbar-account flex items-center gap-3">
+              <NotificationsMenu />
               <div className="text-right text-xs leading-tight">
                 <p className="font-bold text-slate-800">{name}</p>
                 <p className="text-slate-500">{detail ?? ROLE_META[role]?.label}</p>
@@ -77,6 +85,17 @@ export default function Navbar() {
 
               <SignOutButton />
             </div>
+            <button
+              type="button"
+              className="mobile-nav-toggle"
+              aria-label={menuOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen((open) => !open)}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                {menuOpen ? <path d="m6 6 12 12M18 6 6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}
+              </svg>
+            </button>
           </>
         ) : (
           <div className="flex items-center gap-2">
@@ -85,11 +104,22 @@ export default function Navbar() {
             </Link>
             <Link
               to="/auth/signup"
-              className="rounded-full bg-slate-900 px-5 py-2 text-sm font-bold text-white transition hover:bg-emerald-600"
+              className="app-pill-button rounded-full px-5 py-2 text-sm font-bold text-white"
             >
               Sign up
             </Link>
           </div>
+        )}
+        {isAuthenticated && menuOpen && (
+          <nav className="mobile-nav-panel" aria-label="Mobile navigation">
+            <NotificationsMenu />
+            {(NAV_BY_ROLE[role] ?? []).map(([to, label]) => (
+              <NavLink key={to} to={to} className={({ isActive }) => `app-nav-link ${isActive ? 'active' : ''}`} end={to === '/donor/listings'} onClick={() => setMenuOpen(false)}>
+                {label}
+              </NavLink>
+            ))}
+            <SignOutButton />
+          </nav>
         )}
       </div>
     </header>

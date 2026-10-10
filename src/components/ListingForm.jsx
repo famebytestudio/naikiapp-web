@@ -1,5 +1,6 @@
 import { useState } from 'react'
 
+import PickupLocationMap from './LazyPickupLocationMap'
 import { FOOD_TYPES, PAKISTAN_CITIES, QUANTITY_UNITS } from '../utils/listingStatus'
 import { EMPTY_LISTING, hasErrors, syncEstimatedKg, validateListing } from '../utils/listingValidation'
 
@@ -39,7 +40,7 @@ function Section({ title, description, children }) {
   )
 }
 
-export default function ListingForm({ initialValues, onSubmit, submitting, submitLabel, isAnonymous, onCancel }) {
+export default function ListingForm({ initialValues, onSubmit, submitting, submitLabel, isAnonymous, onCancel, allowPastDates = false }) {
   const [values, setValues] = useState({ ...EMPTY_LISTING, ...initialValues })
   const [errors, setErrors] = useState({})
   const [submitted, setSubmitted] = useState(false)
@@ -69,7 +70,7 @@ export default function ListingForm({ initialValues, onSubmit, submitting, submi
     event.preventDefault()
     setSubmitted(true)
 
-    const found = validateListing(values)
+    const found = validateListing(values, Date.now(), { allowPastDates })
     setErrors(found)
     if (hasErrors(found)) {
       // Move focus to the first problem rather than leaving the donor to hunt.
@@ -206,7 +207,7 @@ export default function ListingForm({ initialValues, onSubmit, submitting, submi
         </div>
       </Section>
 
-      <Section title="Where and who" description="Charities only see this after they claim the listing.">
+      <Section title="Where and who" description="Verified charities within the 10 km pickup radius can find this listing. The exact address is only shared after a claim.">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="City" htmlFor="city" error={errors.city}>
             <input
@@ -246,6 +247,22 @@ export default function ListingForm({ initialValues, onSubmit, submitting, submi
             className={inputClass}
           />
         </Field>
+
+        <div id="pickup_location" tabIndex={-1}>
+          <PickupLocationMap
+            latitude={values.pickup_latitude}
+            longitude={values.pickup_longitude}
+            onChange={({ latitude, longitude }) => {
+              setField('pickup_latitude', latitude)
+              setField('pickup_longitude', longitude)
+            }}
+          />
+          {errors.pickup_location && (
+            <p className="mt-1.5 text-xs font-semibold text-rose-600" role="alert">
+              {errors.pickup_location}
+            </p>
+          )}
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Contact name" htmlFor="contact_name" error={errors.contact_name}>

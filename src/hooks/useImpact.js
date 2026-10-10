@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
+import { getDemoImpact } from '../lib/listingsApi'
 
 const emptyStats = {
 	rescues: 0,
@@ -18,25 +19,19 @@ const toNumber = (value) => {
 
 export function useImpact() {
 	const [stats, setStats] = useState(emptyStats)
-	const [loading, setLoading] = useState(Boolean(supabase))
+	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState('')
 
 	const loadImpact = useCallback(async () => {
 		if (!supabase) {
-			setStats({
-				rescues: 18,
-				activeRescues: 4,
-				delivered: 14,
-				deliveredKg: 186.5,
-				claimed: 9,
-				pickedUp: 5,
-				byCity: [
-					{ city: 'Lahore', value: 9 },
-					{ city: 'Islamabad', value: 6 },
-					{ city: 'Karachi', value: 3 },
-				],
-			})
-			setLoading(false)
+			try {
+				setStats(await getDemoImpact())
+				setError('')
+			} catch (loadError) {
+				setError(loadError.message)
+			} finally {
+				setLoading(false)
+			}
 			return
 		}
 
@@ -77,7 +72,10 @@ export function useImpact() {
 
 	useEffect(() => {
 		loadImpact()
-		if (!supabase) return undefined
+		if (!supabase) {
+			window.addEventListener('naikiapp:listings-changed', loadImpact)
+			return () => window.removeEventListener('naikiapp:listings-changed', loadImpact)
+		}
 
 		const channel = supabase
 			.channel('impact-dashboard')

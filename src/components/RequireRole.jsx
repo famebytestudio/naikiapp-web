@@ -15,8 +15,8 @@ import { FullPageLoader } from './PageState'
   Role access is also enforced by the database policies; this guard keeps users
   in the right part of the application and is not a substitute for RLS.
 */
-export default function RequireRole({ roles, children }) {
-  const { isAuthenticated, loading, role } = useAuth()
+export default function RequireRole({ roles, children, allowPendingNgo = false }) {
+  const { isAuthenticated, loading, ngo, profile, role } = useAuth()
   const location = useLocation()
 
   if (loading) return <FullPageLoader />
@@ -25,11 +25,19 @@ export default function RequireRole({ roles, children }) {
     return <Navigate to="/auth/login" replace state={{ from: `${location.pathname}${location.search}` }} />
   }
 
+  if (profile?.disabled_at) {
+    return <Navigate to="/auth/login" replace state={{ disabled: true }} />
+  }
+
   if (!roles.includes(role)) {
     // Replace, so the forbidden URL does not sit in history waiting for Back to
     // bounce them here again.
     return <Navigate to={homeForRole(role)} replace />
   }
+
+  const pendingNgo = role === 'ngo' && ngo?.verification_status !== 'verified'
+  if (pendingNgo && !allowPendingNgo) return <Navigate to="/ngo/verification" replace />
+  if (!pendingNgo && allowPendingNgo) return <Navigate to={homeForRole(role)} replace />
 
   return children
 }

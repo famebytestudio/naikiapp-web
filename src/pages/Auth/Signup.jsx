@@ -36,6 +36,10 @@ const ACCOUNT_TYPES = [
 const EMPTY = {
   full_name: '',
   organisation: '',
+  registration_number: '',
+  id_card_number: '',
+  id_card_file: null,
+  official_link: '',
   phone: '',
   email: '',
   password: '',
@@ -64,6 +68,7 @@ function SignupForm() {
   const [values, setValues] = useState({ ...EMPTY, role: isRole(requested) ? requested : 'donor' })
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState(null)
+  const [confirmationMessage, setConfirmationMessage] = useState('')
   const [pending, setPending] = useState(false)
 
   const isNgo = values.role === 'ngo'
@@ -82,6 +87,13 @@ function SignupForm() {
     setFormError(null)
   }
 
+  function updateIdCardFile(event) {
+    const file = event.target.files?.[0] ?? null
+    setValues((current) => ({ ...current, id_card_file: file }))
+    setErrors((current) => ({ ...current, id_card_file: undefined }))
+    setFormError(null)
+  }
+
   async function handleSubmit(event) {
     event.preventDefault()
 
@@ -92,6 +104,14 @@ function SignupForm() {
     setPending(true)
     try {
       const session = await signUp(values)
+      if (session.needsEmailConfirmation) {
+        setConfirmationMessage(
+          isNgo
+            ? 'Check your email to confirm your account, then sign in to securely upload your representative ID and submit the charity for review.'
+            : 'Check your email to confirm your account before signing in.',
+        )
+        return
+      }
       navigate(location.state?.from ?? homeForRole(session.profile.role), { replace: true })
     } catch (error) {
       setFormError(error.message)
@@ -113,8 +133,13 @@ function SignupForm() {
         </>
       }
     >
-      <form onSubmit={handleSubmit} noValidate className="space-y-5">
+      <form onSubmit={handleSubmit} noValidate className="auth-form-grid">
         <AuthError>{formError}</AuthError>
+        {confirmationMessage && (
+          <p className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800" role="status">
+            {confirmationMessage}
+          </p>
+        )}
 
         <fieldset>
           <legend className="text-sm font-bold text-slate-800">What are you here to do?</legend>
@@ -166,6 +191,71 @@ function SignupForm() {
           hint={isNgo ? 'The name your charity uses publicly.' : undefined}
         />
 
+        {isNgo && (
+          <>
+            <AuthField
+              id="registration_number"
+              label="Charity registration number"
+              placeholder="Registration reference"
+              value={values.registration_number}
+              onChange={update('registration_number')}
+              error={errors.registration_number}
+              autoComplete="off"
+            />
+
+            <AuthField
+              id="id_card_number"
+              label="Representative’s ID card number"
+              placeholder="Enter the number shown on the ID card"
+              value={values.id_card_number}
+              onChange={update('id_card_number')}
+              error={errors.id_card_number}
+              autoComplete="off"
+            />
+
+            <div>
+              <label htmlFor="id_card_file" className="block text-sm font-bold text-slate-800">
+                Representative’s ID card photo or scan
+              </label>
+              <input
+                id="id_card_file"
+                type="file"
+                accept="image/jpeg,image/png,application/pdf"
+                onChange={updateIdCardFile}
+                aria-invalid={errors.id_card_file ? true : undefined}
+                aria-describedby={errors.id_card_file ? 'id_card_file-error' : 'id_card_file-hint'}
+                className={`mt-2 w-full rounded-2xl border bg-white px-4 py-3 text-sm text-slate-900 outline-none transition file:mr-3 file:rounded-full file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:text-xs file:font-bold file:text-emerald-800 ${
+                  errors.id_card_file ? 'border-rose-300' : 'border-slate-200'
+                }`}
+              />
+              {errors.id_card_file ? (
+                <p id="id_card_file-error" className="mt-1.5 text-xs font-semibold text-rose-600">
+                  {errors.id_card_file}
+                </p>
+              ) : (
+                <p id="id_card_file-hint" className="mt-1.5 text-xs text-slate-500">
+                  JPG, PNG, or PDF; maximum 2 MB. Local demo data is stored in this browser, so do not upload a real ID card.
+                </p>
+              )}
+              {values.id_card_file && (
+                <p className="mt-1 text-xs text-slate-600">{values.id_card_file.name}</p>
+              )}
+            </div>
+
+            <AuthField
+              id="official_link"
+              label="Official verification link"
+              type="url"
+              placeholder="https://official-registry.example/charity/..."
+              value={values.official_link}
+              onChange={update('official_link')}
+              error={errors.official_link}
+              hint="Link to the government registry entry or your organisation’s official website."
+              autoComplete="url"
+            />
+          </>
+        )}
+
         <AuthField
           id="email"
           label="Email"
@@ -213,8 +303,8 @@ function SignupForm() {
 
         <AuthSubmit pending={pending}>Create account</AuthSubmit>
 
-        <p className="text-xs leading-relaxed text-slate-500">
-          Platform staff accounts are created by the NaikiApp team rather than signed up for, so there is
+        <p className="auth-submit-note text-xs leading-relaxed text-slate-500">
+          Platform staff accounts are created by the DastarKhan team rather than signed up for, so there is
           no admin option here.
         </p>
       </form>

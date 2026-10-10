@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { normalizeListing } from './useListings'
+import { listMyClaims, updateClaimStatus } from '../lib/listingsApi'
 
 const firstValue = (...values) => values.find((value) => value !== undefined && value !== null && value !== '')
 const asNullableNumber = (value) => {
@@ -18,11 +19,24 @@ const normalizeClaim = (row) => ({
 
 export function useClaims() {
 	const [claims, setClaims] = useState([])
-	const [loading, setLoading] = useState(Boolean(supabase))
+	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState('')
 
 	const loadClaims = useCallback(async () => {
-		if (!supabase) return
+		if (!supabase) {
+			try {
+				const data = await listMyClaims()
+				setClaims(data.map((listing) => ({
+					...normalizeListing(listing),
+					claimedAt: listing.claimed_at,
+				})))
+				setError('')
+			} catch (loadError) {
+				setError(loadError.message)
+			}
+			setLoading(false)
+			return
+		}
 		const { data, error: queryError } = await supabase
 			.from('donation_claims')
 			.select('donation_id, ngo_id, claimed_at, donations (*)')
@@ -37,19 +51,30 @@ export function useClaims() {
 	}, [])
 
 	const updateStatus = useCallback(async (donationId, status, actualKg = null) => {
-		if (!supabase) return { error: new Error('Live claims are unavailable until Supabase is configured.') }
-		const { error: updateError } = await supabase.rpc('update_donation_status', {
-			p_donation_id: donationId,
-			p_next_status: status,
-			p_actual_kg: actualKg,
-		})
-		if (!updateError) await loadClaims()
-		return { error: updateError }
+		try {
+			if (!supabase) {
+				await updateClaimStatus(donationId, status, actualKg)
+			} else {
+				const { error: updateError } = await supabase.rpc('update_donation_status', {
+					p_donation_id: donationId,
+					p_next_status: status,
+					p_actual_kg: actualKg,
+				})
+				if (updateError) throw updateError
+			}
+			await loadClaims()
+			return { error: null }
+		} catch (updateError) {
+			return { error: updateError }
+		}
 	}, [loadClaims])
 
 	useEffect(() => {
 		loadClaims()
-		if (!supabase) return undefined
+		if (!supabase) {
+			window.addEventListener('naikiapp:listings-changed', loadClaims)
+			return () => window.removeEventListener('naikiapp:listings-changed', loadClaims)
+		}
 
 		const channel = supabase
 			.channel('ngo-claims')

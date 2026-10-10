@@ -1,358 +1,116 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
-
-import CountdownTag from '../../components/CountdownTag'
-import SignOutButton from '../../components/SignOutButton'
-import { useAuth } from '../../context/useAuth'
+import PublicHeader from '../../components/PublicHeader'
+import SiteFooter from '../../components/SiteFooter'
+import HeroFlowAnimation from '../../components/HeroFlowAnimation'
 import { useImpact } from '../../hooks/useImpact'
-import { useNow } from '../../hooks/useNow'
-
-/*
-  NaikiApp Web - landing page (Premium Styled)
-*/
-
-const MINUTE = 60_000
-const START = Date.now()
-
-const DEMO_LISTINGS = [
-  {
-    id: 1,
-    donor: 'Al-Noor Wedding Hall',
-    food: 'Chicken biryani and qorma',
-    type: 'Cooked',
-    plates: 120,
-    kg: 60,
-    city: 'Lahore',
-    area: 'Gulberg',
-    window: '9:00 to 10:30 pm',
-    expiresAt: START + 135 * MINUTE,
-  },
-  {
-    id: 2,
-    donor: 'Anonymous Donor',
-    food: 'Fresh bread and rusk',
-    type: 'Packaged',
-    plates: 40,
-    kg: 18,
-    city: 'Karachi',
-    area: 'Clifton',
-    window: '8:30 to 9:30 pm',
-    expiresAt: START + 52 * MINUTE,
-  },
-  {
-    id: 3,
-    donor: 'Chaudhry Grocers',
-    food: 'Mixed vegetables and fruit',
-    type: 'Fresh produce',
-    plates: 0,
-    kg: 25,
-    city: 'Islamabad',
-    area: 'G-9 Markaz',
-    window: '8:00 to 8:45 pm',
-    expiresAt: START + 24 * MINUTE,
-  },
-]
-
-const DEMO_IMPACT = { kg: 12480, deliveries: 391, donors: 74, ngos: 26 }
+import './landing.css'
 
 const STEPS = [
-  ['Available', 'A donor posts surplus food with quantity, expiry time and pickup window.', 'M12 4v16m8-8H4'],
-  ['Claimed', 'A local charity claims it. The listing locks, so nobody else can take it.', 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
-  ['Picked up', 'The charity collects the food during the pickup window.', 'M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4'],
-  ['Delivered', 'The charity enters the actual kg delivered and the impact numbers update.', 'M13 7h8m0 0v8m0-8l-8 8-4-4-6 6'],
+  ['Post a little extra.', 'Tell us what you have, how much, and when it can be collected.', 'M12 4v16m8-8H4'],
+  ['Find its next home.', 'A local charity claims your food and arranges the collection.', 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+  ['Make the handover.', 'The charity collects your donation within the pickup window.', 'M3 7h18v13H3zM7 7V4h10v3m-8 6h6'],
+  ['See the good it does.', 'The charity records the kilograms delivered. Your impact grows.', 'M4 17l5-5 4 3 7-10m-6 0h6v6'],
+]
+const QUESTIONS = [
+  ['Who can donate food?', 'Restaurants, wedding halls, grocers and households can create a donor account and share surplus food. Include clear quantity, storage and pickup details in your listing.'],
+  ['How do charities collect donations?', 'Create an NGO account, browse available food and claim a suitable listing. Collect within its pickup window, then update the status to picked up and delivered.'],
+  ['Can I keep my name private?', 'Yes. Donors can turn on the anonymity preference. Anonymous donors are excluded from the public Top Donors list.'],
+  ['Is there a fee to get involved?', 'DastarKhan does not collect payments. The platform connects people with surplus food to local charities.'],
 ]
 
-const ROLES = [
-  {
-    name: 'Donor',
-    who: 'Restaurants, wedding halls, grocers and households',
-    points: ['Post surplus food in under a minute', 'Track who claimed it and where pickup stands', 'See your own kg donated', 'Hide your name with the anonymity toggle'],
-    color: 'from-orange-400 to-red-500'
-  },
-  {
-    name: 'NGO or charity',
-    who: 'Registered local charities',
-    points: ['Browse live listings by city, area and food type', 'Claim food as soon as you create an account', 'Update pickup status through to delivered', 'Open the pickup address in Google Maps'],
-    color: 'from-emerald-400 to-teal-500'
-  },
-  {
-    name: 'Admin',
-    who: 'FameByte Studio supervisors',
-    points: ['Approve or reject NGO registrations', 'Remove fake or abusive listings', 'View platform-wide impact'],
-    color: 'from-blue-400 to-indigo-500'
-  },
-]
-
-function ListingCard({ listing, now }) {
-  const [claimed, setClaimed] = useState(false)
-  if (listing.expiresAt <= now) return null
-  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${listing.area}, ${listing.city}`)}`
-
+function Hero() {
   return (
-    <article className="group relative overflow-hidden rounded-3xl border border-white/40 bg-white/60 p-6 shadow-xl shadow-slate-200/50 backdrop-blur-md transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-emerald-200/50">
-      <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-      
-      <div className="relative z-10 flex items-start justify-between gap-4">
-        <div>
-          <h3 className="font-['Outfit'] text-xl font-bold text-slate-800 transition-colors group-hover:text-emerald-700">{listing.food}</h3>
-          <p className="mt-1 text-sm font-medium text-slate-500">{listing.donor}</p>
-        </div>
-        {claimed ? (
-          <span className="rounded-full bg-slate-800 px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow-md">Claimed</span>
-        ) : (
-          <CountdownTag expiresAt={listing.expiresAt} now={now} />
-        )}
-      </div>
-      
-      <div className="relative z-10 mt-6 grid grid-cols-2 gap-4 rounded-2xl bg-slate-50/50 p-4 backdrop-blur-sm">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Quantity</p>
-          <p className="mt-1 text-sm font-medium text-slate-700">
-            {listing.type}, {listing.plates > 0 ? `${listing.plates} plates, ` : ''}~{listing.kg}kg
-          </p>
-        </div>
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Location</p>
-          <p className="mt-1 text-sm font-medium text-slate-700">{listing.area}, {listing.city}</p>
-        </div>
-      </div>
-
-      <div className="relative z-10 mt-6 flex items-center justify-between gap-4">
-        <button
-          type="button"
-          onClick={() => setClaimed(true)}
-          disabled={claimed}
-          className="relative overflow-hidden rounded-full bg-slate-900 px-6 py-2.5 text-sm font-bold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:bg-emerald-600 hover:shadow-emerald-500/30 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
-        >
-          {claimed ? 'Waiting for pickup' : 'Claim Food'}
-        </button>
-        <a 
-          href={mapsUrl} 
-          target="_blank" 
-          rel="noreferrer" 
-          className="group/link flex items-center gap-1.5 text-sm font-semibold text-emerald-600 transition-colors hover:text-emerald-700"
-        >
-          View Map
-          <svg className="h-4 w-4 transition-transform group-hover/link:-translate-y-0.5 group-hover/link:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-          </svg>
-        </a>
-      </div>
-    </article>
-  )
-}
-
-function Header() {
-  const { isAuthenticated } = useAuth()
-
-  return (
-    <header className="fixed inset-x-0 top-0 z-50 flex items-center justify-center p-4">
-      <div className="flex w-full max-w-6xl items-center justify-between rounded-full border border-white/20 bg-white/70 px-6 py-4 shadow-lg shadow-slate-200/20 backdrop-blur-xl transition-all duration-300">
-        <a href="#top" className="flex items-center gap-2 font-['Outfit'] text-2xl font-black tracking-tight text-slate-900">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 text-white shadow-md">
-            N
-          </div>
-          NaikiApp
-        </a>
-        <nav className="hidden gap-8 text-sm font-bold text-slate-600 md:flex">
-          <Link to="/ngo/feed" className="transition-colors hover:text-emerald-600">Browse food</Link>
-          <a href="#how" className="transition-colors hover:text-emerald-600">How it works</a>
-          <a href="#roles" className="transition-colors hover:text-emerald-600">Who it's for</a>
-          <a href="#impact" className="transition-colors hover:text-emerald-600">Impact</a>
-        </nav>
-        <div className="flex items-center gap-4 text-sm font-bold">
-          {isAuthenticated ? (
-            <SignOutButton />
-          ) : (
-            <>
-              <Link to="/ngo/feed" className="hidden text-slate-600 transition-colors hover:text-slate-900 sm:block">Browse food</Link>
-              <Link to="/auth/login" className="hidden text-slate-600 transition-colors hover:text-slate-900 sm:block">Log in</Link>
-              <Link to="/auth/signup" className="rounded-full bg-slate-900 px-6 py-2.5 text-white shadow-md transition-all hover:scale-105 hover:bg-emerald-600 hover:shadow-emerald-500/30 active:scale-95">Sign up</Link>
-            </>
-          )}
-        </div>
-      </div>
-    </header>
-  )
-}
-
-function Hero({ now }) {
-  return (
-    <section id="top" className="relative flex min-h-screen items-center justify-center overflow-hidden pt-24 pb-12">
-      {/* Background decoration */}
-      <div className="absolute -top-40 -right-40 h-96 w-96 rounded-full bg-emerald-300/30 blur-3xl" />
-      <div className="absolute -bottom-40 -left-40 h-96 w-96 rounded-full bg-teal-300/30 blur-3xl" />
-      
-      <div className="relative mx-auto grid w-full max-w-6xl gap-16 px-6 lg:grid-cols-[1.1fr_1fr] lg:items-center">
-        <div className="flex flex-col items-start pt-10 lg:pt-0">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-sm font-bold text-emerald-700 shadow-sm backdrop-blur-md">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500"></span>
-            </span>
+    <section id="top" className="landing-hero">
+      <div className="landing-hero-inner">
+        <div className="landing-copy">
+          <div className="landing-kicker">
+            <span className="landing-kicker-dot" />
             Live Food Rescue Platform
           </div>
           
-          <h1 className="mt-8 font-['Outfit'] text-5xl font-black leading-[1.1] tracking-tight text-slate-900 sm:text-6xl lg:text-7xl">
-            Surplus food from <span className="bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">Pakistan's kitchens</span>, to those in need.
+          <h1>
+            Surplus food from <span>Pakistan’s kitchens</span>, to those in need.
           </h1>
           
-          <p className="mt-8 max-w-xl text-lg font-medium leading-relaxed text-slate-600">
-            NaikiApp connects restaurants, wedding halls, grocers and households with local charities.
+          <p>
+            DastarKhan connects restaurants, wedding halls, grocers and households with local charities.
             Donors post what's left over, a charity claims it, and every delivery is counted.
           </p>
           
-          <div className="mt-10 flex w-full flex-col gap-4 sm:flex-row">
-            <Link to="/auth/signup" className="flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-8 py-4 font-bold text-white shadow-xl shadow-emerald-500/30 transition-all hover:scale-105 hover:bg-emerald-500 active:scale-95">
+          <div className="landing-hero-actions">
+            <Link to="/auth/signup">
               Donate Food
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>
             </Link>
-            {/* ?role=ngo preselects the charity option on the sign-up form. */}
-            <Link to="/auth/signup?role=ngo" className="flex items-center justify-center gap-2 rounded-full border-2 border-slate-200 bg-white/50 px-8 py-4 font-bold text-slate-700 shadow-sm backdrop-blur-md transition-all hover:scale-105 hover:border-slate-300 hover:bg-white active:scale-95">
+            <Link to="/auth/signup?role=ngo">
               Register Charity
             </Link>
           </div>
         </div>
 
-        <div aria-label="Sample live feed" className="relative flex flex-col gap-5">
-          <div className="absolute -inset-x-10 -inset-y-10 z-0 bg-gradient-to-b from-transparent via-white/50 to-transparent blur-xl" />
-          {DEMO_LISTINGS.map((l, index) => (
-            <div key={l.id} className="relative z-10 animate-[fade-in-up_0.8s_ease-out_forwards]" style={{ animationDelay: `${index * 150}ms`, opacity: 0 }}>
-              <ListingCard listing={l} now={now} />
-            </div>
-          ))}
-          <p className="mt-2 text-center text-sm font-bold text-slate-400">Live sample listings from your area.</p>
-        </div>
+        <HeroFlowAnimation />
       </div>
     </section>
   )
 }
+
 
 function HowItWorks() {
-  return (
-    <section id="how" className="relative overflow-hidden bg-slate-900 py-32 text-white">
-      {/* Decorative blobs */}
-      <div className="absolute -left-1/4 -top-1/4 h-1/2 w-1/2 rounded-full bg-emerald-500/20 blur-[120px]" />
-      <div className="absolute -bottom-1/4 -right-1/4 h-1/2 w-1/2 rounded-full bg-blue-500/20 blur-[120px]" />
-
-      <div className="relative mx-auto max-w-6xl px-6">
-        <div className="text-center">
-          <h2 className="font-['Outfit'] text-4xl font-black tracking-tight sm:text-5xl lg:text-6xl">
-            Every donation follows <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">one clear path</span>.
-          </h2>
-          <p className="mt-6 text-lg font-medium text-slate-400">Both sides can see exactly where the food is at all times.</p>
-        </div>
-
-        <div className="mt-20 grid gap-8 md:grid-cols-4">
-          {STEPS.map(([title, text, iconPath], i) => (
-            <div key={title} className="group relative rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur-md transition-all duration-300 hover:-translate-y-2 hover:bg-white/10 hover:shadow-2xl hover:shadow-emerald-500/10">
-              <div className="absolute -inset-px rounded-3xl bg-gradient-to-b from-emerald-500/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-              
-              <div className="relative">
-                <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white shadow-lg">
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={iconPath} />
-                  </svg>
-                </div>
-                <div className="mb-2 text-sm font-bold uppercase tracking-wider text-emerald-400">Step {i + 1}</div>
-                <h3 className="font-['Outfit'] text-2xl font-bold text-white">{title}</h3>
-                <p className="mt-4 leading-relaxed text-slate-300">{text}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
+  return <section id="how" className="landing-section landing-how">
+    <div className="landing-section-inner">
+      <div className="home-section-heading"><div><p className="home-eyebrow">A SIMPLE WAY TO DO GOOD</p><h2>Less food wasted.<br /><span>More people cared for.</span></h2></div><p>From your kitchen to a community. Four small steps turn something extra into something that matters.</p></div>
+      <div className="landing-steps">{STEPS.map(([title, copy, icon], i) => <article className="landing-step" key={title}>
+        <div className="home-step-top"><span className="home-step-number">0{i + 1}</span><svg width="27" height="27" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={icon} /></svg></div>
+        <h3>{title}</h3><p>{copy}</p>
+      </article>)}</div>
+    </div>
+  </section>
 }
 
-function Roles() {
-  return (
-    <section id="roles" className="bg-slate-50 py-32">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="text-center">
-          <h2 className="font-['Outfit'] text-4xl font-black tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
-            Three roles, <span className="bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">one shared feed</span>.
-          </h2>
-          <p className="mt-6 text-lg font-medium text-slate-600">Built specifically for the needs of each participant in the rescue chain.</p>
-        </div>
-
-        <div className="mt-20 grid gap-8 md:grid-cols-3">
-          {ROLES.map((r) => (
-            <div key={r.name} className="group rounded-3xl border border-slate-200 bg-white p-8 shadow-xl shadow-slate-200/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl hover:shadow-slate-300/50">
-              <div className={`mb-6 inline-block rounded-xl bg-gradient-to-br ${r.color} p-4 text-white shadow-lg`}>
-                {/* Generic icon placeholder */}
-                <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              </div>
-              <h3 className="font-['Outfit'] text-2xl font-bold text-slate-900">{r.name}</h3>
-              <p className="mt-2 text-sm font-semibold uppercase tracking-wider text-slate-500">{r.who}</p>
-              <ul className="mt-8 space-y-4">
-                {r.points.map((p) => (
-                  <li key={p} className="flex gap-4">
-                    <span className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${r.color} shadow-sm`}>
-                      <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </span>
-                    <span className="font-medium text-slate-700">{p}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
+function JoinCommunity() {
+  return <section id="roles" className="landing-section home-join">
+    <div className="landing-section-inner">
+      <div className="home-section-heading"><div><p className="home-eyebrow">THERE IS A PLACE FOR YOU HERE</p><h2>Good starts <span>with us.</span></h2></div><p>A busy kitchen. A neighbourhood charity.<br />Different starting points, one shared purpose.</p></div>
+      <div className="home-join-grid">
+        <article className="home-join-card home-join-donor"><span className="home-pill">FOR DONORS</span><div className="home-card-art" aria-hidden="true"><svg viewBox="0 0 200 130"><ellipse cx="100" cy="111" rx="77" ry="8" fill="#E8D6BF" /><path d="M40 59h120q-6 51-60 51T40 59" fill="#D9822B" /><ellipse cx="100" cy="58" rx="62" ry="15" fill="#F5CB81" /><path d="m63 53 12 5m17-9 12 8m18-5 12 6" stroke="#fff" strokeWidth="5" strokeLinecap="round" /><path d="M79 34q-12-12 0-25m22 21q-12-12 0-25m22 29q-12-12 0-25" fill="none" stroke="#A99171" strokeWidth="3" strokeLinecap="round" /></svg></div><h3>Your surplus.<br />Someone's next meal.</h3><p>Make room for kindness. Share good food from your restaurant, event, shop or home.</p><Link to="/auth/signup">Start sharing food <span aria-hidden="true">↗</span></Link></article>
+        <article className="home-join-card home-join-charity"><span className="home-pill">FOR CHARITIES</span><div className="home-card-art" aria-hidden="true"><svg viewBox="0 0 200 130"><ellipse cx="100" cy="114" rx="76" ry="8" fill="#CDDCC6" /><path d="M48 53h104v60H48z" fill="#fff" /><path d="m37 56 63-43 63 43" fill="none" stroke="#2D6A4F" strokeWidth="10" strokeLinejoin="round" /><path d="M64 66h22v22H64zm51 0h22v22h-22z" fill="#C4D8BC" /><path d="M91 85h21v28H91z" fill="#D9822B" /><path d="M96 49c-16-12-4-23 4-13 8-10 20 1 4 13l-4 3z" fill="#D9822B" /></svg></div><h3>Closer to food.<br />Closer to your community.</h3><p>Find available donations nearby and help good food reach the people you support.</p><Link to="/auth/signup?role=ngo">Join as a charity <span aria-hidden="true">↗</span></Link></article>
       </div>
-    </section>
-  )
+    </div>
+  </section>
 }
 
 function Impact() {
-  const { stats: liveStats, loading } = useImpact()
+  const { stats: liveStats, loading, error } = useImpact()
+  const display = (value) => (loading ? '...' : error ? '—' : value)
   const stats = [
-    ['Deliveries completed', loading ? '...' : liveStats.delivered, '+12%'],
-    ['Active donors', DEMO_IMPACT.donors, '+5%'],
-    ['Local charities', DEMO_IMPACT.ngos, '+18%'],
+    ['Deliveries completed', display(liveStats.delivered)],
+    ['Active rescues', display(liveStats.activeRescues)],
+    ['Rescues recorded', display(liveStats.rescues)],
   ]
   return (
-    <section id="impact" className="relative overflow-hidden bg-emerald-900 py-32 text-white">
-      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
-      <div className="absolute top-0 right-0 h-[800px] w-[800px] -translate-y-1/2 translate-x-1/3 rounded-full bg-emerald-500/30 blur-[120px]" />
-      
-      <div className="relative mx-auto grid max-w-6xl gap-16 px-6 lg:grid-cols-[1.2fr_1fr] lg:items-center">
+    <section id="impact" className="landing-section landing-impact">
+      <div className="landing-section-inner landing-impact-grid">
         <div>
-          <h2 className="font-['Outfit'] text-xl font-bold uppercase tracking-widest text-emerald-300">Platform Impact</h2>
-          <div className="mt-6 flex items-baseline gap-4">
-            <span className="font-['Outfit'] text-7xl font-black tabular-nums tracking-tighter sm:text-9xl">
-              {loading ? '...' : liveStats.deliveredKg.toLocaleString()}
-            </span>
-            <span className="text-3xl font-bold text-emerald-300">kg</span>
+          <h2 className="landing-impact-kicker">Recorded impact</h2>
+          <div className="landing-impact-total">
+            {display(liveStats.deliveredKg.toLocaleString())}
+            <span>kg</span>
           </div>
-          <p className="mt-6 text-2xl font-medium text-emerald-100/90">
-            of perfectly good food rescued and delivered to those who need it most.
+          <p className="landing-impact-copy">
+            {error ? 'Impact data is temporarily unavailable.' : 'kilograms recorded as delivered across the donation history.'}
           </p>
         </div>
         
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1">
-          {stats.map(([label, value, growth]) => (
-            <div key={label} className="group relative overflow-hidden rounded-3xl border border-emerald-700/50 bg-emerald-800/50 p-8 backdrop-blur-sm transition-all hover:bg-emerald-700/50">
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-400/10 to-emerald-500/0 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-              <div className="relative flex items-center justify-between">
-                <div>
-                  <dt className="text-sm font-bold uppercase tracking-wider text-emerald-300">{label}</dt>
-                  <dd className="mt-2 font-['Outfit'] text-4xl font-black tabular-nums tracking-tight">{value}</dd>
-                </div>
-                <div className="flex items-center gap-1 rounded-full bg-emerald-400/20 px-3 py-1 text-sm font-bold text-emerald-300">
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                  </svg>
-                  {growth}
-                </div>
+        <div className="landing-impact-stats">
+          {stats.map(([label, value]) => (
+            <dl key={label} className="landing-impact-stat">
+              <div>
+                <dt>{label}</dt>
+                <dd>{value}</dd>
               </div>
-            </div>
+            </dl>
           ))}
         </div>
       </div>
@@ -360,43 +118,25 @@ function Impact() {
   )
 }
 
-function Footer() {
-  return (
-    <footer className="bg-slate-950 py-12 text-slate-400">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-6 px-6 md:flex-row">
-        <div className="flex items-center gap-2 font-['Outfit'] text-xl font-bold text-white">
-          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-xs">
-            N
-          </div>
-          NaikiApp
-        </div>
-        <p className="text-sm font-medium">Built with purpose by FameByte Studio interns Iqra and Rida.</p>
-        <p className="text-xs font-semibold text-slate-500">No payments collected. Web application demo.</p>
-      </div>
-    </footer>
-  )
+
+function Community() {
+  return <section className="landing-section home-community"><div className="landing-section-inner">
+    <div className="home-section-heading"><div><p className="home-eyebrow">THE PEOPLE BEHIND THE GOOD</p><h2>A growing circle <span>of care.</span></h2></div><p>Meet the organisations making food rescue possible, one donation at a time.</p></div>
+    <div className="home-community-grid">
+      <Link to="/registered-ngos"><div className="home-community-symbol" aria-hidden="true">◎</div><div><span>OUR CHARITY NETWORK</span><h3>Registered NGOs</h3><p>Discover the organisations connecting food with communities.</p></div><b aria-hidden="true">↗</b></Link>
+      <Link to="/top-donors"><div className="home-community-symbol" aria-hidden="true">♡</div><div><span>GENEROSITY IN ACTION</span><h3>Top Donors</h3><p>Celebrate donors and the deliveries they have made possible.</p></div><b aria-hidden="true">↗</b></Link>
+    </div>
+  </div></section>
+}
+
+function Questions() {
+  return <section className="landing-section home-faq"><div className="landing-section-inner home-faq-grid"><div><p className="home-eyebrow">A FEW THINGS TO KNOW</p><h2>A little clarity.<br /><span>A confident start.</span></h2><p>Food rescue should feel simple.<br />Here are some answers to get you going.</p></div><div>{QUESTIONS.map(([question, answer]) => <details key={question}><summary>{question}<span aria-hidden="true">+</span></summary><p>{answer}</p></details>)}</div></div></section>
 }
 
 export default function Landing() {
-  const now = useNow()
-  return (
-    <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-emerald-200 selection:text-emerald-900">
-      <Header />
-      <main>
-        <Hero now={now} />
-        <HowItWorks />
-        <Roles />
-        <Impact />
-      </main>
-      <Footer />
-      
-      {/* Required for the stagger animation in Hero */}
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes fade-in-up {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}} />
-    </div>
-  )
+  return <div className="landing-page home-refresh"><PublicHeader /><main><Hero />
+    <div className="home-values" aria-label="Our purpose"><span>Made for local communities</span><i aria-hidden="true">✳</i><span>Every donation matters</span><i aria-hidden="true">✳</i><span>Good food deserves a second chance</span></div>
+    <HowItWorks /><JoinCommunity /><Impact /><Community /><Questions />
+    <section className="home-final-cta"><div><p className="home-eyebrow">LET'S MAKE ROOM FOR GOOD</p><h2>Have a little extra?<br />It could mean everything.</h2><p>Your next act of kindness could start in your kitchen.</p><Link to="/auth/signup">Share your first donation <span aria-hidden="true">↗</span></Link></div><span className="home-cta-flower" aria-hidden="true">✳</span></section>
+    </main><SiteFooter /></div>
 }
