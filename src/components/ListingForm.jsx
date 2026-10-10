@@ -30,12 +30,17 @@ function Field({ label, htmlFor, error, hint, children, className = '' }) {
   )
 }
 
-function Section({ title, description, children }) {
+function Section({ id, step, title, description, children }) {
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="font-display text-lg font-bold text-slate-900">{title}</h2>
-      {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
-      <div className="mt-5 space-y-4">{children}</div>
+    <section id={id} className="listing-form-section">
+      <div className="listing-form-section-heading">
+        <span className="listing-form-step" aria-hidden="true">{step}</span>
+        <div>
+          <h2>{title}</h2>
+          {description && <p>{description}</p>}
+        </div>
+      </div>
+      <div className="listing-form-section-content">{children}</div>
     </section>
   )
 }
@@ -44,6 +49,8 @@ export default function ListingForm({ initialValues, onSubmit, submitting, submi
   const [values, setValues] = useState({ ...EMPTY_LISTING, ...initialValues })
   const [errors, setErrors] = useState({})
   const [submitted, setSubmitted] = useState(false)
+  const isNewListing = submitLabel === 'Post listing'
+  const pendingLabel = isNewListing ? 'Sharing…' : 'Saving…'
 
   function setField(name, value) {
     setValues((current) => {
@@ -83,8 +90,8 @@ export default function ListingForm({ initialValues, onSubmit, submitting, submi
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-6">
-      <Section title="What are you donating?" description="Keep it short and specific so a charity can decide quickly.">
+    <form onSubmit={handleSubmit} noValidate className="listing-form">
+      <Section id="what-youre-sharing" step="01" title="What are you sharing?" description="A few details help a charity decide quickly.">
         <Field label="Food name" htmlFor="title" error={errors.title}>
           <input
             id="title"
@@ -173,7 +180,7 @@ export default function ListingForm({ initialValues, onSubmit, submitting, submi
         </div>
       </Section>
 
-      <Section title="Timing" description="The pickup window has to close before the food expires.">
+      <Section id="when-to-collect" step="02" title="When can it be collected?" description="Make sure the pickup window ends before the food expires.">
         <Field label="Food expires" htmlFor="expiry_at" error={errors.expiry_at}>
           <input
             id="expiry_at"
@@ -207,7 +214,7 @@ export default function ListingForm({ initialValues, onSubmit, submitting, submi
         </div>
       </Section>
 
-      <Section title="Where and who" description="Verified charities within the 10 km pickup radius can find this listing. The exact address is only shared after a claim.">
+      <Section id="where-to-collect" step="03" title="Where should they collect it?" description="Set an accurate pin. Your exact address is only shared after a charity claims the food.">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="City" htmlFor="city" error={errors.city}>
             <input
@@ -294,23 +301,30 @@ export default function ListingForm({ initialValues, onSubmit, submitting, submi
         </p>
       </Section>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="submit"
-          disabled={submitting}
-          className="rounded-full bg-emerald-600 px-7 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-600/20 transition hover:bg-emerald-500 active:scale-95 disabled:opacity-50"
-        >
-          {submitting ? 'Saving…' : submitLabel}
-        </button>
-        {onCancel && (
+      <div className="listing-form-actions">
+        <p>
+          {isNewListing
+            ? 'Review your details before sharing. You can manage this listing from My listings.'
+            : 'Review your changes before saving.'}
+        </p>
+        <div>
           <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-full border border-slate-300 px-6 py-3 text-sm font-bold text-slate-600 transition hover:bg-white active:scale-95"
+            type="submit"
+            disabled={submitting}
+            className="listing-form-submit"
           >
-            Cancel
+            {submitting ? pendingLabel : submitLabel}
           </button>
-        )}
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="listing-form-cancel"
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </div>
     </form>
   )

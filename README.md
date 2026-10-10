@@ -17,7 +17,8 @@ environment variables.
 Apply the repository migrations in filename order before using live signup,
 private NGO document review, donation pickup pins, 10 km claim validation, and
 in-app status notifications. Apply all migrations through
-`0019_admin_donor_directory.sql` for the admin donor directory. Turn off
+`0020_restrict_donation_inserts_to_donors.sql` for the latest donation access
+policy. Turn off
 **Confirm email** in the Supabase Dashboard under **Authentication → Sign In /
 Providers → Email** to enable immediate signup and login. Charities can sign in
 immediately but stay on the registration review page, and cannot browse or
@@ -44,6 +45,22 @@ SQL Editor to refresh PostgREST's schema cache:
 ```sql
 NOTIFY pgrst, 'reload schema';
 ```
+
+### Posting food reports that `delivery_radius_km` is missing
+
+The pickup pin and fixed 10 km radius are added by migrations
+`0014_donation_pickup_map_and_radius.sql` and
+`0015_set_delivery_radius_to_10_km.sql`. Apply all pending migrations in
+filename order using `supabase db push` or the Supabase Dashboard SQL Editor.
+If those migrations are already applied, run `NOTIFY pgrst, 'reload schema';`
+in the SQL Editor, then refresh the app.
+
+### Posting food reports a row-level security error
+
+The insert policy only allows active donor profiles to post an available listing
+owned by their signed-in user ID. Apply migration
+`0020_restrict_donation_inserts_to_donors.sql`, then sign in with a donor
+account. The app supplies the authenticated user ID as the listing owner.
 
 Nearby browser alerts are opt-in and work while the NGO feed is open. Status and
 verification changes appear in the in-app notifications menu. Email/SMS and

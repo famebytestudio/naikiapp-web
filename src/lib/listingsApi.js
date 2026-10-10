@@ -514,15 +514,34 @@ export async function getById(id) {
 */
 export async function create(values) {
   if (supabase) {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) throw sessionError
+    if (!session) throw new Error('Sign in as a donor before posting surplus food.')
+
     const { data, error } = await supabase
       .from('donations')
       .insert({
         ...values,
+        donor_id: session.user.id,
         delivery_radius_km: DELIVERY_RADIUS_KM,
         status: 'available',
       })
       .select()
       .single()
+    if (
+      error
+      && ['42703', 'PGRST204'].includes(error.code)
+      && /delivery_radius_km|pickup_latitude|pickup_longitude/.test(error.message)
+    ) {
+      throw new Error(
+        'The Supabase donations table is missing the pickup-location schema. Apply migrations 0014_donation_pickup_map_and_radius.sql and 0015_set_delivery_radius_to_10_km.sql in order, then reload the API schema cache.',
+      )
+    }
+    if (error?.code === '42501' && error.message.includes('row-level security')) {
+      throw new Error(
+        'Supabase blocked this listing. Ensure you are signed in with a donor account and apply migration 0020_restrict_donation_inserts_to_donors.sql.',
+      )
+    }
     if (error) throw error
     return data
   }
