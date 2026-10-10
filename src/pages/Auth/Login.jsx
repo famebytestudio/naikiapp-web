@@ -8,6 +8,12 @@ import { DEMO_ACCOUNTS } from '../../lib/authApi'
 import { validateSignIn } from '../../utils/authValidation'
 import { homeForRole, ROLE_META } from '../../utils/roles'
 
+const LOGIN_ROLES = [
+  { value: 'donor', label: 'Donor', description: 'I share surplus food' },
+  { value: 'ngo', label: 'Charity organization', description: 'I represent a charity' },
+  { value: 'admin', label: 'Administrator', description: 'I manage the platform' },
+]
+
 /*
   Email and password, against whichever auth backend AuthContext is wired to.
 
@@ -30,7 +36,7 @@ function LoginForm() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  const [values, setValues] = useState({ email: '', password: '' })
+  const [values, setValues] = useState({ email: '', password: '', role: 'donor' })
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState(null)
   const [pending, setPending] = useState(false)
@@ -54,7 +60,7 @@ function LoginForm() {
 
     setPending(true)
     try {
-      const session = await signIn(values)
+      const session = await signIn(values, values.role)
       navigate(location.state?.from ?? homeForRole(session.profile.role), { replace: true })
     } catch (error) {
       setFormError(error.message)
@@ -64,7 +70,7 @@ function LoginForm() {
   }
 
   function fillDemoAccount(account) {
-    setValues({ email: account.email, password: account.password })
+    setValues({ email: account.email, password: account.password, role: account.role })
     setErrors({})
     setFormError(null)
   }
@@ -84,6 +90,38 @@ function LoginForm() {
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-5">
         <AuthError>{formError}</AuthError>
+
+        <fieldset>
+          <legend className="text-sm font-bold text-slate-800">Sign in as</legend>
+          <div className="mt-2 grid gap-2 sm:grid-cols-3">
+            {LOGIN_ROLES.map((role) => (
+              <label
+                key={role.value}
+                className={`flex cursor-pointer items-start gap-2 rounded-2xl border p-3 transition ${
+                  values.role === role.value
+                    ? 'border-emerald-300 bg-emerald-50'
+                    : 'border-slate-200 bg-white hover:border-slate-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="login-role"
+                  value={role.value}
+                  checked={values.role === role.value}
+                  onChange={() => {
+                    setValues((current) => ({ ...current, role: role.value }))
+                    setFormError(null)
+                  }}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-600"
+                />
+                <span className="text-xs">
+                  <span className="block font-bold text-slate-900">{role.label}</span>
+                  <span className="mt-0.5 block text-slate-600">{role.description}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
 
         <AuthField
           id="email"

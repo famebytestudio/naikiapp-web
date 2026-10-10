@@ -7,6 +7,7 @@ import SiteFooter from './components/SiteFooter'
 import { AuthProvider } from './context/AuthContext'
 import ListingsOverview from './pages/Admin/ListingsOverview'
 import ManageListing from './pages/Admin/ManageListing'
+import RegisteredDonors from './pages/Admin/RegisteredDonors'
 import RegisteredNgos from './pages/Admin/RegisteredNgos'
 import Login from './pages/Auth/Login'
 import Signup from './pages/Auth/Signup'
@@ -213,6 +214,14 @@ export default function App() {
               element={
                 <RequireRole roles={['admin']}>
                   <RegisteredNgos />
+                </RequireRole>
+              }
+            />
+            <Route
+              path="/admin/donors"
+              element={
+                <RequireRole roles={['admin']}>
+                  <RegisteredDonors />
                 </RequireRole>
               }
             />

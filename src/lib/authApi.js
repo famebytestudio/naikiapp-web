@@ -500,6 +500,31 @@ export async function listRegisteredNgosForAdmin() {
     .sort((a, b) => new Date(b.registeredAt ?? 0) - new Date(a.registeredAt ?? 0))
 }
 
+export async function listDonorsForAdmin() {
+  await latency()
+  const session = getSession()
+  if (session?.profile?.role !== 'admin') {
+    throw new Error('Only administrators can view registered donors.')
+  }
+
+  const accounts = Object.values(readAccounts())
+    .filter((entry) => entry.profile?.role === 'donor')
+    .map((entry) => ({
+      id: entry.id,
+      email: entry.email,
+      full_name: entry.profile.full_name ?? '',
+      organisation: entry.profile.organisation ?? '',
+      phone: entry.profile.phone ?? '',
+      is_anonymous: Boolean(entry.profile.is_anonymous),
+      created_at: entry.profile.created_at ?? entry.created_at,
+      disabled_at: entry.profile.disabled_at ?? null,
+      disabled_reason: entry.profile.disabled_reason ?? null,
+      donation_count: 0,
+    }))
+
+  return accounts.sort((a, b) => new Date(b.created_at ?? 0) - new Date(a.created_at ?? 0))
+}
+
 export async function setNgoVerificationByAdmin(id, decision, note = '') {
   await latency()
   const session = getSession()

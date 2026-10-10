@@ -59,7 +59,7 @@ export default function RegisteredNgos() {
       if (!supabase) return listRegisteredNgosForAdmin()
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, organisation, phone, created_at, disabled_at, disabled_reason, ngo_details(organisation, registration_number, id_card_number, id_card_document_path, official_link, verification_status, needs_info, review_note, created_at)')
+        .select('id, full_name, organisation, phone, created_at, disabled_at, disabled_reason, ngo_details!ngo_details_profile_id_fkey(organisation, registration_number, id_card_number, id_card_document_path, official_link, verification_status, needs_info, review_note, created_at)')
         .eq('role', 'ngo')
         .order('created_at', { ascending: false })
       if (error) throw error

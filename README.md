@@ -16,11 +16,12 @@ environment variables.
 
 Apply the repository migrations in filename order before using live signup,
 private NGO document review, donation pickup pins, 10 km claim validation, and
-in-app status notifications. Turn off **Confirm email** in the Supabase
-Dashboard under **Authentication → Sign In / Providers → Email** to enable
-immediate signup and login. Charities can sign in immediately but stay on the
-registration review page, and cannot browse or claim donations until an
-administrator approves their application.
+in-app status notifications. Apply all migrations through
+`0019_admin_donor_directory.sql` for the admin donor directory. Turn off
+**Confirm email** in the Supabase Dashboard under **Authentication → Sign In /
+Providers → Email** to enable immediate signup and login. Charities can sign in
+immediately but stay on the registration review page, and cannot browse or
+claim donations until an administrator approves their application.
 
 ### Login/signup reports that `public.profiles` is missing
 
@@ -34,11 +35,11 @@ supabase db push
 ```
 
 Apply migrations in filename order if you use the Supabase Dashboard SQL Editor
-instead, including `0018_repair_existing_auth_profiles.sql`. This latest
-migration repairs Auth accounts that were created without a profile and ensures
-new users trigger profile creation. If the migrations are applied but the schema
-cache error remains, run this in the SQL Editor to refresh PostgREST's schema
-cache:
+instead, including `0019_admin_donor_directory.sql`. Migration
+`0018_repair_existing_auth_profiles.sql` repairs Auth accounts that were
+created without a profile and ensures new users trigger profile creation. If
+the migrations are applied but the schema cache error remains, run this in the
+SQL Editor to refresh PostgREST's schema cache:
 
 ```sql
 NOTIFY pgrst, 'reload schema';

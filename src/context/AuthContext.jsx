@@ -84,8 +84,24 @@ export function AuthProvider({ children }) {
 
   const { session, ready } = state
 
-  const signIn = useCallback(async (credentials) => {
+  const signIn = useCallback(async (credentials, expectedRole) => {
     const next = await apiSignIn(credentials)
+    if (expectedRole && next.profile.role !== expectedRole) {
+      const actualRole = next.profile.role === 'ngo' ? 'charity organization' : next.profile.role
+      try {
+        await apiSignOut()
+      } catch (error) {
+        setState({ session: next, ready: true })
+        throw new Error(
+          `These credentials belong to a ${actualRole} account, but Supabase could not sign it out. Sign out, then select the matching account type.`,
+          { cause: error },
+        )
+      }
+      setState({ session: null, ready: true })
+      throw new Error(
+        `These credentials belong to a ${actualRole} account. Select that account type and try again.`,
+      )
+    }
     setState({ session: next, ready: true })
     return next
   }, [])

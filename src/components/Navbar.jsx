@@ -31,6 +31,7 @@ const NAV_BY_ROLE = {
   admin: [
     ['/admin/listings', 'All listings'],
     ['/admin/ngos', 'Registered NGOs'],
+    ['/admin/donors', 'Registered donors'],
   ],
 }
 
