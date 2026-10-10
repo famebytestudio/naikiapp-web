@@ -17,8 +17,8 @@ import { homeForRole, isRole } from '../../utils/roles'
   could send that would create an admin, and authApi throws if one is attempted.
   Platform staff are promoted out of band.
 
-  Charities can browse and claim available food as soon as they create an
-  account.
+  Charities can sign in immediately, but need administrator approval before
+  they can browse or claim available food.
 */
 const ACCOUNT_TYPES = [
   {
@@ -29,7 +29,7 @@ const ACCOUNT_TYPES = [
   {
     value: 'ngo',
     label: 'I represent a charity',
-    blurb: 'Browse and claim available food for your community.',
+    blurb: 'Register your organisation for administrator approval.',
   },
 ]
 
@@ -68,7 +68,6 @@ function SignupForm() {
   const [values, setValues] = useState({ ...EMPTY, role: isRole(requested) ? requested : 'donor' })
   const [errors, setErrors] = useState({})
   const [formError, setFormError] = useState(null)
-  const [confirmationMessage, setConfirmationMessage] = useState('')
   const [pending, setPending] = useState(false)
 
   const isNgo = values.role === 'ngo'
@@ -104,15 +103,10 @@ function SignupForm() {
     setPending(true)
     try {
       const session = await signUp(values)
-      if (session.needsEmailConfirmation) {
-        setConfirmationMessage(
-          isNgo
-            ? 'Check your email to confirm your account, then sign in to securely upload your representative ID and submit the charity for review.'
-            : 'Check your email to confirm your account before signing in.',
-        )
-        return
-      }
-      navigate(location.state?.from ?? homeForRole(session.profile.role), { replace: true })
+      const destination = session.profile.role === 'ngo' && session.ngo?.verification_status !== 'verified'
+        ? '/ngo/verification'
+        : homeForRole(session.profile.role)
+      navigate(location.state?.from ?? destination, { replace: true })
     } catch (error) {
       setFormError(error.message)
     } finally {
@@ -135,11 +129,6 @@ function SignupForm() {
     >
       <form onSubmit={handleSubmit} noValidate className="auth-form-grid">
         <AuthError>{formError}</AuthError>
-        {confirmationMessage && (
-          <p className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-semibold text-emerald-800" role="status">
-            {confirmationMessage}
-          </p>
-        )}
 
         <fieldset>
           <legend className="text-sm font-bold text-slate-800">What are you here to do?</legend>

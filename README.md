@@ -16,10 +16,33 @@ environment variables.
 
 Apply the repository migrations in filename order before using live signup,
 private NGO document review, donation pickup pins, 10 km claim validation, and
-in-app status notifications. Configure Supabase Auth email confirmation and the
-site's redirect URLs for local development and production. If email confirmation
-is enabled, NGO users sign in after confirming and submit their ID document from
-the registration review page.
+in-app status notifications. Turn off **Confirm email** in the Supabase
+Dashboard under **Authentication → Sign In / Providers → Email** to enable
+immediate signup and login. Charities can sign in immediately but stay on the
+registration review page, and cannot browse or claim donations until an
+administrator approves their application.
+
+### Login/signup reports that `public.profiles` is missing
+
+The configured Supabase project must have the repository migrations applied.
+From the repository root, link the Supabase CLI to the same project used by
+`VITE_SUPABASE_URL` and push the migrations:
+
+```sh
+supabase link --project-ref <your-project-ref>
+supabase db push
+```
+
+Apply migrations in filename order if you use the Supabase Dashboard SQL Editor
+instead, including `0018_repair_existing_auth_profiles.sql`. This latest
+migration repairs Auth accounts that were created without a profile and ensures
+new users trigger profile creation. If the migrations are applied but the schema
+cache error remains, run this in the SQL Editor to refresh PostgREST's schema
+cache:
+
+```sql
+NOTIFY pgrst, 'reload schema';
+```
 
 Nearby browser alerts are opt-in and work while the NGO feed is open. Status and
 verification changes appear in the in-app notifications menu. Email/SMS and

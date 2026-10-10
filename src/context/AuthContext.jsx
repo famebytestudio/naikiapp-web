@@ -92,7 +92,7 @@ export function AuthProvider({ children }) {
 
   const signUp = useCallback(async (fields) => {
     const next = await apiSignUp(fields)
-    if (!next.needsEmailConfirmation) setState({ session: next, ready: true })
+    setState({ session: next, ready: true })
     return next
   }, [])
 

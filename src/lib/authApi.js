@@ -327,6 +327,16 @@ export async function loadSupabaseSession(authSession) {
     .select('*')
     .eq('id', authSession.user.id)
     .single()
+  if (profileError?.code === 'PGRST205') {
+    throw new Error(
+      'Supabase is missing public.profiles or its API schema cache is stale. Apply the repository migrations to the project configured by VITE_SUPABASE_URL, then reload the schema cache.',
+    )
+  }
+  if (profileError?.code === 'PGRST116') {
+    throw new Error(
+      'Supabase authenticated this account, but it has no profile row. Apply the latest repository migrations, including 0018_repair_existing_auth_profiles.sql, then sign out and sign in again.',
+    )
+  }
   if (profileError) throw profileError
 
   let ngo = null
@@ -695,7 +705,6 @@ export async function signUp({
       email: normalisedEmail,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/login`,
         data: {
           full_name: full_name.trim(),
           organisation: organisation?.trim() || '',
@@ -710,12 +719,9 @@ export async function signUp({
     if (error) throw error
 
     if (!data.session) {
-      return {
-        needsEmailConfirmation: true,
-        user: { id: data.user.id, email: data.user.email },
-        profile: { role },
-        ngo: null,
-      }
+      throw new Error(
+        'This Supabase project still requires email confirmation. Disable Confirm email in the Supabase Dashboard under Authentication > Sign In / Providers > Email to enable immediate signup and login. The account may already have been created.',
+      )
     }
 
     if (role === 'ngo') {

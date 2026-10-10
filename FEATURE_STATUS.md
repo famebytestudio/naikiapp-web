@@ -34,7 +34,7 @@
 | Supabase auth and real account registration | **Incomplete** | `AuthContext` still uses local demo auth. Supabase NGO sign-up needs server-side role/profile provisioning and private Storage uploads; do not treat browser metadata as an authorization mechanism. The ID file in the local demo is stored unencrypted in browser storage and must not contain a real identity document. |
 | Supabase donor create/edit/cancel and anonymity | **Incomplete** | Donor listing API and profile preference are local-demo operations, not database-backed. |
 | Full live Supabase workflow | **Incomplete / unverified** | Feed, claims, status RPCs, impact, and admin paths have Supabase code, but no project credentials or Supabase Auth session are configured to exercise them end to end. Apply migrations `0014_donation_pickup_map_and_radius.sql` and `0015_set_delivery_radius_to_10_km.sql` for pickup coordinates, a fixed 10 km radius, and server-side range checks during claims. |
-| Apply and verify admin migrations | **Incomplete outside repository** | Apply migrations `0009_admin_moderation.sql` through `0016_live_auth_reviews_and_notifications.sql` to the target Supabase project and verify grants/RLS before using live admin tools. |
+| Apply and verify admin migrations | **Incomplete outside repository** | Apply migrations `0009_admin_moderation.sql` through `0018_repair_existing_auth_profiles.sql` to the target Supabase project and verify grants/RLS before using live admin tools. |
 | Backfill legacy pickup pins | **Not completed** | Existing donations without coordinates are excluded from nearby search. Edit each listing and set its actual pickup pin; no exact coordinates are inferred from private street addresses. |
 | Production readiness | **Incomplete** | Local storage is editable and browser-only; configure and test server auth, migrations, RLS, RPCs, and live data before deployment. |
 
@@ -45,7 +45,7 @@
 | `/` | Public | Animated illustration, how-it-works, role overview, current impact summary, calls to action, and shared footer. |
 | `/auth/login` | Public | Validated login, errors, and donor/NGO/admin demo-account shortcuts. |
 | `/auth/signup` | Public | Donor/NGO role selection; NGO registrations require the charity reference, representative ID number/photo or scan, and official verification link. New NGO applications are pending admin review. |
-| `/ngo/verification` | Signed-in NGO | Shows review notes and lets an NGO securely upload/update required evidence after email confirmation or an information request. |
+| `/ngo/verification` | Signed-in NGO | Shows review notes and lets an NGO securely upload/update required evidence or respond to an information request while awaiting administrator approval. |
 | `/donor/listings` | Donor | Own listing history, status views, anonymity preference, edit/cancel actions, and data states. |
 | `/donor/listings/new` | Donor | Validated surplus-food listing creation with an interactive OpenStreetMap pickup pin and fixed 10 km delivery circle. |
 | `/donor/listings/:id/edit` | Donor | Own available-listing edit workflow, including its persisted pickup pin. |
